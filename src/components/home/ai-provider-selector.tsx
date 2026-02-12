@@ -20,25 +20,44 @@ export interface AIProviderConfig {
   model?: string;
 }
 
+interface ModelOption {
+  id: string;
+  label: string;
+  price: string;
+}
+
+const CLAUDE_MODELS: ModelOption[] = [
+  { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', price: '$5 / $25' },
+  { id: 'claude-opus-4-5-20250929', label: 'Claude Opus 4.5', price: '$5 / $25' },
+  { id: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5', price: '$3 / $15' },
+  { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4', price: '$3 / $15' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', price: '$1 / $5' },
+  { id: 'claude-haiku-3-5-20241022', label: 'Claude Haiku 3.5', price: '$0.80 / $4' },
+];
+
 const PROVIDERS = {
   claude: {
     label: 'Claude (Anthropic)',
     defaultModel: 'claude-sonnet-4-5-20250929',
+    models: CLAUDE_MODELS,
     baseURL: undefined,
   },
   openai: {
     label: 'OpenAI',
     defaultModel: 'gpt-4o',
+    models: null,
     baseURL: 'https://api.openai.com/v1/chat/completions',
   },
   openrouter: {
     label: 'OpenRouter',
     defaultModel: 'anthropic/claude-sonnet-4-5-20250929',
+    models: null,
     baseURL: 'https://openrouter.ai/api/v1/chat/completions',
   },
   cerebras: {
     label: 'Cerebras',
     defaultModel: 'llama-4-scout-17b-16e-instruct',
+    models: null,
     baseURL: 'https://api.cerebras.ai/v1/chat/completions',
   },
 } as const;
@@ -84,6 +103,9 @@ export function AIProviderSelector({
     }
   };
 
+  const providerInfo = PROVIDERS[config.provider];
+  const models = providerInfo.models;
+
   return (
     <Card className="p-4 space-y-3">
       <h2 className="text-lg font-semibold">AI Provider</h2>
@@ -124,10 +146,32 @@ export function AIProviderSelector({
 
       <div className="space-y-2">
         <Label>Model</Label>
-        <Input
-          value={config.model || ''}
-          onChange={(e) => onChange({ ...config, model: e.target.value })}
-        />
+        {models ? (
+          <Select
+            value={config.model || ''}
+            onValueChange={(v) => onChange({ ...config, model: v })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  <span>{m.label}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {m.price}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            value={config.model || ''}
+            onChange={(e) => onChange({ ...config, model: e.target.value })}
+            placeholder="e.g. gpt-4o"
+          />
+        )}
       </div>
     </Card>
   );
