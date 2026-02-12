@@ -36,6 +36,7 @@ export function buildSystemPrompt(
     '4. Default duration: 15-30 seconds for social media',
     '5. ALWAYS include Intro -> Main content -> Outro structure',
     '6. Use skills (overlays) to enhance storytelling',
+    '7. The "assets" array in output must ONLY contain assets from the AVAILABLE ASSETS list below. If no assets are listed, output "assets": []',
     '',
     'AVAILABLE ASSETS:',
     assetList,

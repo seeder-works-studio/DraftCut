@@ -73,5 +73,20 @@ export async function generateVideoSpec(
   }
 
   const spec = JSON.parse(jsonText);
+
+  // Sanitize: strip any invalid assets that Claude hallucinated
+  if (Array.isArray(spec.assets)) {
+    spec.assets = spec.assets.filter(
+      (a: unknown) =>
+        typeof a === 'object' &&
+        a !== null &&
+        'id' in a &&
+        'type' in a &&
+        'filename' in a
+    );
+  } else {
+    spec.assets = [];
+  }
+
   return validateProjectSpec(spec);
 }
