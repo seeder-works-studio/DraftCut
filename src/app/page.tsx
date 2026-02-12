@@ -15,6 +15,7 @@ import { saveSetting, loadAPIKey } from '@/lib/storage/api-keys';
 import { saveAsset } from '@/lib/storage/assets';
 import { processWebsiteUrl } from '@/lib/ai/website';
 import { generateMusic } from '@/lib/ai/music';
+import { generateMusicBeatoven } from '@/lib/ai/beatoven';
 import { toast } from 'sonner';
 
 function extractUrl(text: string): string | null {
@@ -33,9 +34,9 @@ export default function HomePage() {
     useProjectStore();
 
   const [aiConfig, setAiConfig] = useState<AIProviderConfig>({
-    provider: 'claude',
+    provider: 'gemini',
     apiKey: '',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'gemini-2.5-flash',
   });
 
   const [brandKit, setBrandKit] = useState<BrandKit>({
@@ -97,18 +98,28 @@ export default function HomePage() {
         }
       }
 
-      // Step 4: Music generation (if Replicate key is configured)
+      // Step 4: Music generation (Beatoven first, fall back to Replicate)
+      const beatovenKey = await loadAPIKey('beatoven');
       const replicateKey = await loadAPIKey('replicate');
-      if (replicateKey) {
+      if (beatovenKey || replicateKey) {
         setStatusMessage('Generating music...');
         try {
           const musicPrompt = websiteContext
             ? `upbeat background music for a promo video about ${websiteContext.title}`
             : 'upbeat energetic background music for a short promo video';
-          const audioBlob = await generateMusic(musicPrompt, 20, replicateKey);
-          const audioFile = new File([audioBlob], 'generated-music.wav', {
-            type: 'audio/wav',
-          });
+          let audioBlob: Blob;
+          let filename: string;
+          let mimeType: string;
+          if (beatovenKey) {
+            audioBlob = await generateMusicBeatoven(musicPrompt, beatovenKey);
+            filename = 'generated-music.mp3';
+            mimeType = 'audio/mpeg';
+          } else {
+            audioBlob = await generateMusic(musicPrompt, 20, replicateKey!);
+            filename = 'generated-music.wav';
+            mimeType = 'audio/wav';
+          }
+          const audioFile = new File([audioBlob], filename, { type: mimeType });
           const audioAsset = await saveAsset(audioFile);
           addAsset(audioAsset);
         } catch (err) {

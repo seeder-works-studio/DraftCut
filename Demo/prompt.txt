@@ -1,0 +1,10 @@
+Create a 30-second demo video for "DraftCut" — an AI video editor built at the "Built with Opus 4.6: Claude Code Hackathon" by Cerebral Valley x Anthropic.
+
+Use all uploaded screenshots as a slideshow. Structure:
+
+1. INTRO (0-3s): Bold title card — "DraftCut" with subtitle "AI Video Editor — Built with Claude Code"
+2. HACKATHON CONTEXT (3-12s): Show the Discord announcement, Opus 4.6 intro, and speaker screenshots with captions like "500 builders. $100K in prizes. One week to ship."
+3. THE TOOL (12-22s): Show the hackathon landing page and registration screenshots with captions: "Describe a video. Upload assets. AI drafts the edit." then "Runs in your browser. 100% private."
+4. OUTRO (22-30s): Call to action — "Try DraftCut" with subtitle "Built with Opus 4.6 + Claude Code"
+
+Dark background (#0a0a0a). Brand colors: warm gold #D4A574, Anthropic purple #8B5CF6. Bold modern captions. Energetic pacing.

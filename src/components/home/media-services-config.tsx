@@ -49,20 +49,12 @@ export const MEDIA_SERVICES: MediaService[] = [
     signupUrl: 'https://www.pexels.com/api/new/',
   },
   {
-    id: 'suno',
-    name: 'Suno',
-    letter: 'S',
-    description: 'AI music generation',
-    placeholder: 'Enter Suno API key...',
-    signupUrl: 'https://suno.com/account',
-  },
-  {
-    id: 'lumaai',
-    name: 'Luma AI',
-    letter: 'L',
-    description: 'AI video generation',
-    placeholder: 'luma-...',
-    signupUrl: 'https://lumalabs.ai/dream-machine/api/keys',
+    id: 'beatoven',
+    name: 'Beatoven.ai',
+    letter: 'B',
+    description: 'AI music composition',
+    placeholder: 'Enter Beatoven API key...',
+    signupUrl: 'https://www.beatoven.ai/pricing',
   },
 ];
 

@@ -34,6 +34,7 @@ export async function generateVideoSpec(
       response.content[0].type === 'text' ? response.content[0].text : '';
   } else {
     const baseURLs: Record<string, string> = {
+      gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
       openai: 'https://api.openai.com/v1/chat/completions',
       openrouter: 'https://openrouter.ai/api/v1/chat/completions',
       cerebras: 'https://api.cerebras.ai/v1/chat/completions',

@@ -14,7 +14,7 @@ import {
 import { saveAPIKey, loadAPIKey } from '@/lib/storage/api-keys';
 
 export interface AIProviderConfig {
-  provider: 'claude' | 'openrouter' | 'cerebras' | 'openai';
+  provider: 'gemini' | 'claude' | 'openrouter' | 'cerebras' | 'openai';
   apiKey: string;
   baseURL?: string;
   model?: string;
@@ -26,6 +26,12 @@ interface ModelOption {
   price: string;
 }
 
+const GEMINI_MODELS: ModelOption[] = [
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', price: 'Free tier' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', price: 'Free tier, limited' },
+  { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', price: 'Free tier' },
+];
+
 const CLAUDE_MODELS: ModelOption[] = [
   { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', price: '$5 / $25' },
   { id: 'claude-opus-4-5-20250929', label: 'Claude Opus 4.5', price: '$5 / $25' },
@@ -36,6 +42,12 @@ const CLAUDE_MODELS: ModelOption[] = [
 ];
 
 const PROVIDERS = {
+  gemini: {
+    label: 'Gemini (Google)',
+    defaultModel: 'gemini-2.5-flash',
+    models: GEMINI_MODELS,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+  },
   claude: {
     label: 'Claude (Anthropic)',
     defaultModel: 'claude-sonnet-4-5-20250929',
