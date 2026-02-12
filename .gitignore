@@ -26,6 +26,13 @@ yarn-error.log*
 
 # env files
 .env*.local
+.env
+
+# test artifacts
+test/.env
+test/*.png
+test/promo-spec.json
+test/promo-raw.txt
 
 # vercel
 .vercel
