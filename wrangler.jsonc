@@ -1,0 +1,10 @@
+{
+  "name": "draftcut",
+  "compatibility_date": "2026-02-12",
+  "assets": {
+    "directory": "./out"
+  },
+  "build": {
+    "command": "npm install && npm run build"
+  }
+}

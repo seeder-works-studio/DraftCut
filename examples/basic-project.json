@@ -1,0 +1,99 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "created": "2025-01-01T00:00:00.000Z",
+    "modified": "2025-01-01T00:00:00.000Z",
+    "description": "Example 20s promo video with intro, lower third, and CTA"
+  },
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "duration": 20,
+    "backgroundColor": "#000000"
+  },
+  "assets": [],
+  "composition": {
+    "tracks": [
+      {
+        "id": "track-video",
+        "type": "video",
+        "clips": []
+      },
+      {
+        "id": "track-overlay",
+        "type": "overlay",
+        "clips": [
+          {
+            "id": "clip-intro",
+            "type": "skill",
+            "startTime": 0,
+            "duration": 3,
+            "skillType": "IntroTitleCard",
+            "skillProps": {
+              "title": "Welcome to DraftCut",
+              "subtitle": "AI-Powered Video Editing",
+              "backgroundColor": "#1a1a2e",
+              "titleColor": "#ffffff",
+              "subtitleColor": "#a0a0a0"
+            }
+          },
+          {
+            "id": "clip-lower-third",
+            "type": "skill",
+            "startTime": 5,
+            "duration": 5,
+            "skillType": "LowerThird",
+            "skillProps": {
+              "name": "Jane Smith",
+              "title": "Product Manager",
+              "position": "bottom-left",
+              "backgroundColor": "#1a1a1a",
+              "textColor": "#ffffff"
+            }
+          },
+          {
+            "id": "clip-captions",
+            "type": "skill",
+            "startTime": 4,
+            "duration": 10,
+            "skillType": "CaptionsPop",
+            "skillProps": {
+              "captions": [
+                { "text": "Create stunning videos", "startTime": 0, "duration": 2.5 },
+                { "text": "with the power of AI", "startTime": 2.5, "duration": 2.5 },
+                { "text": "right in your browser", "startTime": 5, "duration": 2.5, "emphasizedWords": [3] },
+                { "text": "no uploads needed", "startTime": 7.5, "duration": 2.5 }
+              ],
+              "fontSize": 48,
+              "fontFamily": "sans-serif",
+              "color": "#ffffff",
+              "position": "center"
+            }
+          },
+          {
+            "id": "clip-outro",
+            "type": "skill",
+            "startTime": 15,
+            "duration": 5,
+            "skillType": "OutroCTA",
+            "skillProps": {
+              "heading": "Try DraftCut Today",
+              "ctaText": "Get Started",
+              "url": "draftcut.app",
+              "backgroundColor": "#1a1a2e",
+              "textColor": "#ffffff",
+              "buttonColor": "#3b82f6",
+              "buttonTextColor": "#ffffff"
+            }
+          }
+        ]
+      },
+      {
+        "id": "track-audio",
+        "type": "audio",
+        "clips": []
+      }
+    ]
+  }
+}
