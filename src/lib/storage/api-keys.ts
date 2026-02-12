@@ -20,3 +20,14 @@ export async function clearAPIKey(provider: string): Promise<void> {
   const db = await getDB();
   await db.delete('settings', `api-key-${provider}`);
 }
+
+export async function saveSetting(key: string, value: string): Promise<void> {
+  const db = await getDB();
+  await db.put('settings', value, key);
+}
+
+export async function loadSetting(key: string): Promise<string | null> {
+  const db = await getDB();
+  const val = await db.get('settings', key);
+  return (val as string) || null;
+}

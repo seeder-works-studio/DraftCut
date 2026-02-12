@@ -19,12 +19,35 @@ function formatBrandKit(brandKit?: BrandKit): string {
   return `- Font: ${font}\n- Primary Color: ${primary}\n- Secondary Color: ${secondary}`;
 }
 
+export interface WebsiteContext {
+  title: string;
+  textContent: string;
+  url: string;
+}
+
+export function buildWebsiteContext(ctx: WebsiteContext): string {
+  return [
+    'WEBSITE CONTEXT (scraped from provided URL):',
+    `URL: ${ctx.url}`,
+    `Site Title: ${ctx.title}`,
+    '',
+    'Key Content:',
+    ctx.textContent.slice(0, 2000),
+    '',
+    'IMPORTANT: Use this website content to create relevant, on-brand video copy.',
+    'Match the tone and messaging of the website. Use the site title, key phrases,',
+    'and product descriptions in the video overlays (IntroTitleCard, CaptionsPop, OutroCTA).',
+  ].join('\n');
+}
+
 export function buildSystemPrompt(
   assets: Asset[],
-  brandKit?: BrandKit
+  brandKit?: BrandKit,
+  websiteContext?: WebsiteContext
 ): string {
   const assetList = formatAssets(assets);
   const brandKitInfo = formatBrandKit(brandKit);
+  const websiteSection = websiteContext ? '\n\n' + buildWebsiteContext(websiteContext) : '';
 
   return [
     'You are a video editor AI that generates structured JSON video specifications.',
@@ -110,5 +133,5 @@ export function buildSystemPrompt(
     '- All assetIds must exist in assets array',
     '- All skillTypes must be valid',
     '- skillProps must match the skill\'s expected interface',
-  ].join('\n');
+  ].join('\n') + websiteSection;
 }

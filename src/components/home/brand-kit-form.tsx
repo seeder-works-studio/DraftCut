@@ -1,6 +1,5 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { BrandKit } from '@/lib/spec/types';
@@ -12,9 +11,7 @@ interface BrandKitFormProps {
 
 export function BrandKitForm({ brandKit, onChange }: BrandKitFormProps) {
   return (
-    <Card className="p-4 space-y-3">
-      <h2 className="text-lg font-semibold">Brand Kit (Optional)</h2>
-
+    <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Primary Font</Label>
@@ -67,6 +64,6 @@ export function BrandKitForm({ brandKit, onChange }: BrandKitFormProps) {
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

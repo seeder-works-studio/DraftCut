@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Toolbar } from '@/components/editor/toolbar';
 import { Preview } from '@/components/editor/preview';
 import { Timeline } from '@/components/editor/timeline';
-import { Inspector } from '@/components/editor/inspector';
+import { ChatPanel } from '@/components/editor/chat-panel';
 import { ExportDialog } from '@/components/editor/export-dialog';
 import { useProjectStore } from '@/stores/project-store';
 import { useAutosave } from '@/hooks/use-autosave';
@@ -43,20 +43,23 @@ export default function EditorPage() {
       />
 
       <div className="flex-1 flex min-h-0">
-        {/* Preview */}
-        <div className="flex-1 min-w-0">
-          <Preview />
+        {/* Chat Panel */}
+        <div className="w-[400px] border-r shrink-0">
+          <ChatPanel />
         </div>
 
-        {/* Inspector */}
-        <div className="w-72 border-l overflow-y-auto bg-card">
-          <Inspector />
-        </div>
-      </div>
+        {/* Editor area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Preview */}
+          <div className="flex-1 min-h-0">
+            <Preview />
+          </div>
 
-      {/* Timeline */}
-      <div className="h-48 border-t">
-        <Timeline />
+          {/* Timeline */}
+          <div className="h-48 border-t">
+            <Timeline />
+          </div>
+        </div>
       </div>
 
       <ExportDialog open={showExport} onOpenChange={setShowExport} />

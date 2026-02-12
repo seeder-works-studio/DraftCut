@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -107,9 +107,7 @@ export function AIProviderSelector({
   const models = providerInfo.models;
 
   return (
-    <Card className="p-4 space-y-3">
-      <h2 className="text-lg font-semibold">AI Provider</h2>
-
+    <div className="space-y-4">
       <div className="space-y-2">
         <Label>Provider</Label>
         <Select
@@ -173,6 +171,6 @@ export function AIProviderSelector({
           />
         )}
       </div>
-    </Card>
+    </div>
   );
 }

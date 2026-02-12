@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { validateProjectSpec } from '@/lib/spec/validator';
 import { buildSystemPrompt } from './prompt';
+import type { WebsiteContext } from './prompt';
 import type { Asset, BrandKit, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
 
@@ -8,9 +9,10 @@ export async function generateVideoSpec(
   userPrompt: string,
   assets: Asset[],
   brandKit: BrandKit | undefined,
-  config: AIProviderConfig
+  config: AIProviderConfig,
+  websiteContext?: WebsiteContext
 ): Promise<ProjectSpec> {
-  const systemPrompt = buildSystemPrompt(assets, brandKit);
+  const systemPrompt = buildSystemPrompt(assets, brandKit, websiteContext);
 
   let jsonText: string;
 
