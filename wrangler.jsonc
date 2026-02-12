@@ -1,8 +1,11 @@
 {
   "name": "draftcut",
+  "main": "./worker/index.ts",
   "compatibility_date": "2026-02-12",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    "directory": "./out"
+    "directory": "./out",
+    "not_found_handling": "single-page-application"
   },
   "build": {
     "command": "npm install && npm run build"
