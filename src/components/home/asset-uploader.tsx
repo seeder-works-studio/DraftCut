@@ -26,6 +26,7 @@ export function AssetUploader() {
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const addAsset = useProjectStore((s) => s.addAsset);
+  const setAssetBlobUrl = useProjectStore((s) => s.setAssetBlobUrl);
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -41,6 +42,9 @@ export function AssetUploader() {
         try {
           const asset = await saveAsset(file);
           addAsset(asset);
+          // Create blob URL immediately so it's available in the editor
+          const blobUrl = URL.createObjectURL(file);
+          setAssetBlobUrl(asset.id, blobUrl);
           toast.success(`Added ${file.name}`);
         } catch {
           toast.error(`Failed to add ${file.name}`);
@@ -48,7 +52,7 @@ export function AssetUploader() {
       }
       setIsUploading(false);
     },
-    [addAsset]
+    [addAsset, setAssetBlobUrl]
   );
 
   const handleDrop = useCallback(

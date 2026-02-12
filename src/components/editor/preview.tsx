@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { Player } from '@remotion/player';
 import { SKILL_REGISTRY } from '@/skills/registry';
 import { useEditorStore } from '@/stores/editor-store';
@@ -9,22 +9,43 @@ import type { Clip } from '@/lib/spec/types';
 
 export function Preview() {
   const spec = useProjectStore((s) => s.spec);
+  const assetBlobUrls = useProjectStore((s) => s.assetBlobUrls);
   const currentTime = useEditorStore((s) => s.currentTime);
+  const isPlaying = useEditorStore((s) => s.isPlaying);
 
-  const activeSkills = useMemo(() => {
-    if (!spec) return [];
-    const overlayTrack = spec.composition.tracks.find(
-      (t) => t.type === 'overlay'
-    );
-    if (!overlayTrack) return [];
+  // Find active clips at current time for each track type
+  const { activeVideoClip, activeImageClips, activeSkills, activeAudioClips } =
+    useMemo(() => {
+      if (!spec) {
+        return {
+          activeVideoClip: null,
+          activeImageClips: [] as Clip[],
+          activeSkills: [] as Clip[],
+          activeAudioClips: [] as Clip[],
+        };
+      }
 
-    return overlayTrack.clips.filter(
-      (c) =>
-        c.type === 'skill' &&
-        currentTime >= c.startTime &&
-        currentTime < c.startTime + c.duration
-    );
-  }, [spec, currentTime]);
+      let activeVideoClip: Clip | null = null;
+      const activeImageClips: Clip[] = [];
+      const activeSkills: Clip[] = [];
+      const activeAudioClips: Clip[] = [];
+
+      for (const track of spec.composition.tracks) {
+        for (const clip of track.clips) {
+          if (
+            currentTime >= clip.startTime &&
+            currentTime < clip.startTime + clip.duration
+          ) {
+            if (clip.type === 'video') activeVideoClip = clip;
+            else if (clip.type === 'image') activeImageClips.push(clip);
+            else if (clip.type === 'skill') activeSkills.push(clip);
+            else if (clip.type === 'audio') activeAudioClips.push(clip);
+          }
+        }
+      }
+
+      return { activeVideoClip, activeImageClips, activeSkills, activeAudioClips };
+    }, [spec, currentTime]);
 
   if (!spec) {
     return (
@@ -51,10 +72,36 @@ export function Preview() {
           overflow: 'hidden',
         }}
       >
-        {/* Base layer placeholder */}
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30 text-sm">
-          {spec.canvas.width}x{spec.canvas.height}
-        </div>
+        {/* Base layer: video */}
+        {activeVideoClip && activeVideoClip.assetId && (
+          <VideoLayer
+            clip={activeVideoClip}
+            blobUrl={assetBlobUrls[activeVideoClip.assetId]}
+            currentTime={currentTime}
+            isPlaying={isPlaying}
+            scale={scale}
+          />
+        )}
+
+        {/* Base layer: images */}
+        {activeImageClips.map((clip) =>
+          clip.assetId ? (
+            <ImageLayer
+              key={clip.id}
+              blobUrl={assetBlobUrls[clip.assetId]}
+              scale={scale}
+              canvasWidth={spec.canvas.width}
+              canvasHeight={spec.canvas.height}
+            />
+          ) : null
+        )}
+
+        {/* Placeholder when no media */}
+        {!activeVideoClip && activeImageClips.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/30 text-sm">
+            {spec.canvas.width}x{spec.canvas.height}
+          </div>
+        )}
 
         {/* Remotion skill overlays */}
         {activeSkills.map((clip) => (
@@ -68,9 +115,131 @@ export function Preview() {
             fps={spec.canvas.fps}
           />
         ))}
+
+        {/* Audio elements (hidden) */}
+        {activeAudioClips.map((clip) =>
+          clip.assetId ? (
+            <AudioLayer
+              key={clip.id}
+              clip={clip}
+              blobUrl={assetBlobUrls[clip.assetId]}
+              currentTime={currentTime}
+              isPlaying={isPlaying}
+            />
+          ) : null
+        )}
       </div>
     </div>
   );
+}
+
+function VideoLayer({
+  clip,
+  blobUrl,
+  currentTime,
+  isPlaying,
+  scale,
+}: {
+  clip: Clip;
+  blobUrl?: string;
+  currentTime: number;
+  isPlaying: boolean;
+  scale: number;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !blobUrl) return;
+
+    // Calculate the time within the video file
+    const clipOffset = currentTime - clip.startTime;
+    const videoTime = (clip.trimStart || 0) + clipOffset;
+
+    // Sync time if drifted
+    if (Math.abs(video.currentTime - videoTime) > 0.3) {
+      video.currentTime = videoTime;
+    }
+
+    if (isPlaying && video.paused) {
+      video.play().catch(() => {});
+    } else if (!isPlaying && !video.paused) {
+      video.pause();
+      video.currentTime = videoTime;
+    }
+  }, [currentTime, isPlaying, blobUrl, clip.startTime, clip.trimStart]);
+
+  if (!blobUrl) return null;
+
+  return (
+    <video
+      ref={videoRef}
+      src={blobUrl}
+      className="absolute inset-0 w-full h-full object-cover"
+      style={{ transform: `scale(${1})` }}
+      muted={false}
+      playsInline
+    />
+  );
+}
+
+function ImageLayer({
+  blobUrl,
+  scale,
+  canvasWidth,
+  canvasHeight,
+}: {
+  blobUrl?: string;
+  scale: number;
+  canvasWidth: number;
+  canvasHeight: number;
+}) {
+  if (!blobUrl) return null;
+
+  return (
+    <img
+      src={blobUrl}
+      alt=""
+      className="absolute inset-0 w-full h-full object-cover"
+    />
+  );
+}
+
+function AudioLayer({
+  clip,
+  blobUrl,
+  currentTime,
+  isPlaying,
+}: {
+  clip: Clip;
+  blobUrl?: string;
+  currentTime: number;
+  isPlaying: boolean;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !blobUrl) return;
+
+    const clipOffset = currentTime - clip.startTime;
+    const audioTime = (clip.trimStart || 0) + clipOffset;
+
+    if (Math.abs(audio.currentTime - audioTime) > 0.3) {
+      audio.currentTime = audioTime;
+    }
+
+    if (isPlaying && audio.paused) {
+      audio.play().catch(() => {});
+    } else if (!isPlaying && !audio.paused) {
+      audio.pause();
+      audio.currentTime = audioTime;
+    }
+  }, [currentTime, isPlaying, blobUrl, clip.startTime, clip.trimStart]);
+
+  if (!blobUrl) return null;
+
+  return <audio ref={audioRef} src={blobUrl} />;
 }
 
 function SkillOverlay({

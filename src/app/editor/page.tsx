@@ -9,6 +9,7 @@ import { Inspector } from '@/components/editor/inspector';
 import { ExportDialog } from '@/components/editor/export-dialog';
 import { useProjectStore } from '@/stores/project-store';
 import { useAutosave } from '@/hooks/use-autosave';
+import { useAssetLoader } from '@/hooks/use-asset-loader';
 
 export default function EditorPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function EditorPage() {
   const [showExport, setShowExport] = useState(false);
 
   useAutosave(spec);
+  useAssetLoader();
 
   if (!spec) {
     return (

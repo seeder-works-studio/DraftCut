@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import type { Asset, BrandKit, ProjectSpec, Clip } from '@/lib/spec/types';
+import type { Asset, ProjectSpec, Clip } from '@/lib/spec/types';
 
 interface ProjectState {
   spec: ProjectSpec | null;
   assets: Asset[];
+  assetBlobUrls: Record<string, string>; // assetId -> blob URL
   isGenerating: boolean;
 
   setSpec: (spec: ProjectSpec) => void;
@@ -12,6 +13,9 @@ interface ProjectState {
   addAsset: (asset: Asset) => void;
   removeAsset: (id: string) => void;
   setIsGenerating: (generating: boolean) => void;
+  setAssetBlobUrl: (assetId: string, url: string) => void;
+  setAssetBlobUrls: (urls: Record<string, string>) => void;
+  revokeAllBlobUrls: () => void;
 
   updateClip: (clipId: string, updates: Partial<Clip>) => void;
 }
@@ -19,6 +23,7 @@ interface ProjectState {
 export const useProjectStore = create<ProjectState>((set, get) => ({
   spec: null,
   assets: [],
+  assetBlobUrls: {},
   isGenerating: false,
 
   setSpec: (spec) => set({ spec }),
@@ -34,10 +39,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   addAsset: (asset) => set((state) => ({ assets: [...state.assets, asset] })),
 
-  removeAsset: (id) =>
-    set((state) => ({ assets: state.assets.filter((a) => a.id !== id) })),
+  removeAsset: (id) => {
+    const url = get().assetBlobUrls[id];
+    if (url) URL.revokeObjectURL(url);
+    set((state) => ({
+      assets: state.assets.filter((a) => a.id !== id),
+      assetBlobUrls: Object.fromEntries(
+        Object.entries(state.assetBlobUrls).filter(([k]) => k !== id)
+      ),
+    }));
+  },
 
   setIsGenerating: (isGenerating) => set({ isGenerating }),
+
+  setAssetBlobUrl: (assetId, url) =>
+    set((state) => ({
+      assetBlobUrls: { ...state.assetBlobUrls, [assetId]: url },
+    })),
+
+  setAssetBlobUrls: (urls) => set({ assetBlobUrls: urls }),
+
+  revokeAllBlobUrls: () => {
+    const urls = get().assetBlobUrls;
+    Object.values(urls).forEach((url) => URL.revokeObjectURL(url));
+    set({ assetBlobUrls: {} });
+  },
 
   updateClip: (clipId, updates) => {
     const spec = get().spec;
