@@ -20,7 +20,7 @@ All keys are stored locally in your browser (IndexedDB). Nothing is sent to any 
 | FAL.ai | https://fal.ai/dashboard/keys | Fast AI inference (image/video) |
 | Pexels | https://www.pexels.com/api/new/ | Stock video & photos |
 | Suno | https://suno.com/account | AI music generation |
-| Luma AI | https://lumalabs.ai/dream-machine/api/keys | AI video generation |
+| Luma AI | https://lumalabs.ai/dream-machine/api/keys | AI video generation (paid API only) |
 
 ## Quick Start
 
