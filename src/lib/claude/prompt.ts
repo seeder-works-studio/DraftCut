@@ -254,5 +254,15 @@ export function buildSystemPrompt(
     '- All assetIds must exist in assets array',
     '- All skillTypes must be valid',
     '- skillProps must match the skill\'s expected interface',
+    '',
+    'JSON FORMATTING RULES (CRITICAL):',
+    '- ALL property names must be in double quotes',
+    '- ALL string values must be in double quotes',
+    '- NO trailing commas before closing brackets',
+    '- NO comments (// or /* */) in JSON',
+    '- NO unescaped newlines in strings - use \\n instead',
+    '- Arrays must use proper JSON array syntax: ["item1", "item2"]',
+    '- Numbers should NOT be quoted: duration: 5 (not "5")',
+    '- Return ONLY valid JSON - no markdown, no explanations',
   ].join('\n') + websiteSection;
 }

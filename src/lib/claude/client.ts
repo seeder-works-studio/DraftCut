@@ -143,6 +143,20 @@ export async function generateVideoSpec(
       logger.debug('VideoGeneration', 'Removed markdown code blocks');
     }
 
+    // Sanitize JSON to fix common AI mistakes
+    // 1. Remove trailing commas before closing brackets/braces
+    jsonText = jsonText.replace(/,(\s*[}\]])/g, '$1');
+
+    // 2. Remove comments (// and /* */)
+    jsonText = jsonText.replace(/\/\/.*$/gm, '');
+    jsonText = jsonText.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // 3. Fix unescaped newlines in strings (common AI mistake)
+    // This regex finds strings and escapes newlines within them
+    jsonText = jsonText.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) => {
+      return match.replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+    });
+
     let spec;
     try {
       spec = JSON.parse(jsonText);
