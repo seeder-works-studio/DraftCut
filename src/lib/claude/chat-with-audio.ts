@@ -109,7 +109,7 @@ export async function chatEditSpecWithAudio(
             id: `system-${Date.now()}`,
             role: 'assistant',
             content: `Audio generated successfully and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
-            timestamp: new Date().toISOString(),
+            timestamp: Date.now(),
           },
         ];
       } catch (error) {
