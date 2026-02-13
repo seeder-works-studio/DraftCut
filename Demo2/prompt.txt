@@ -1,0 +1,147 @@
+Create a dynamic 45-second promo video for DraftCut by SeederWorks.
+
+STRUCTURE:
+
+**INTRO (0-4s): IntroTitleCard**
+- Title: "DraftCut"
+- Subtitle: "AI-Powered Video Editor"
+- Logo: seederworkslogo.png
+- Background: Deep blue gradient (#0a0e27 to #1a1f3a)
+- Title color: Gold (#D4A574)
+- Subtitle color: Light blue (#00D9FF)
+- Accent color: Purple (#8B5CF6)
+
+**TERMINAL DEMO (4-10s): TerminalWindow**
+- Command: "npx draftcut generate --prompt 'product launch video'"
+- Output: "✓ Video generated in 8 seconds"
+- Theme: dark
+- Rotation Y: 15 degrees
+- Slide direction: up
+- Font size: 28
+
+**MAIN MESSAGE (10-18s): KineticTypography**
+Lines:
+- "Turn text into video"
+- "in DraftCut"  (emphasize in gold #D4A574)
+- "No editing skills needed"
+Animation style: bounce
+Timing: word
+Stagger: 12 frames
+Font size: 72
+Color: #FFFFFF
+Background: #0a0e27
+Align: center
+Vertical align: center
+
+**FEATURES SHOWCASE (18-28s): Multiple overlays**
+
+Layer 1 (18-28s): ImageSlideshow
+- Slides:
+  1. Screenshot 2026-02-12 at 6.29.48 PM.png - duration 5s, kenBurns: zoomIn
+  2. Screenshot 2026-02-12 at 6.29.36 PM.png - duration 5s, kenBurns: panRight
+- Background: #000000
+- Transition duration: 20 frames
+
+Layer 2 (19-23s): TextReveal
+- Text: "AI-powered motion graphics"
+- Style: wordPop
+- Font size: 56
+- Color: #00D9FF
+- Background: transparent
+- Align: center
+- Vertical align: bottom
+
+Layer 3 (23-27s): CaptionsPop
+- Captions:
+  * {text: "Ken Burns effects", startTime: 0, duration: 2}
+  * {text: "Kinetic typography", startTime: 2, duration: 2}
+- Font size: 42
+- Color: #FFFFFF
+- Background: rgba(0, 0, 0, 0.7)
+- Position: bottom
+
+**STATS (28-33s): CountUpNumber + ProgressBar**
+
+Layer 1 (28-31s): CountUpNumber
+- From: 0
+- To: 100
+- Duration: 2.5 seconds
+- Suffix: "%"
+- Decimals: 0
+- Font size: 120
+- Color: #00D9FF
+- Align: center
+- Vertical align: center
+
+Layer 2 (28-31s): TextReveal
+- Text: "Browser-based rendering"
+- Style: fadeIn
+- Font size: 36
+- Color: #FFFFFF
+- Align: center
+- Vertical align: top
+
+Layer 3 (31-33s): ProgressBar
+- Progress: 95
+- Label: "Export Quality"
+- Show percentage: true
+- Color: #8B5CF6
+- Background: rgba(255, 255, 255, 0.1)
+- Height: 35
+- Position: center
+
+**BRANDING (33-37s): BrandLogo + LowerThird**
+
+Layer 1 (33-37s): BrandLogo
+- Logo asset: seederworkslogo.png
+- Animation type: pulse
+- Scale: 0.8
+- Position: center
+- Loop: true
+
+Layer 2 (34-37s): LowerThird
+- Name: "SeederWorks"
+- Title: "Venture Studio"
+- Position: bottom-center
+- Background color: #1a1f3a
+- Text color: #D4A574
+
+**CTA (37-42s): TextReveal sequence**
+
+Sequence 1 (37-39s): TextReveal
+- Text: "12 professional skills"
+- Style: slideUp
+- Font size: 48
+- Color: #FFFFFF
+- Align: center
+- Vertical align: center
+
+Sequence 2 (39-41s): TextReveal
+- Text: "Export to WebM instantly"
+- Style: slideUp
+- Font size: 48
+- Color: #00D9FF
+- Align: center
+- Vertical align: center
+
+**OUTRO (42-45s): OutroCTA**
+- Heading: "Start Creating Today"
+- CTA text: "Try DraftCut"
+- Logo: seederworkslogo.png
+- Background: #0a0e27
+- Text color: #FFFFFF
+- Button color: #D4A574
+- Button text color: #0a0e27
+
+TECHNICAL SPECS:
+- Canvas: 1920x1080 (16:9), 30fps
+- Duration: 45 seconds
+- Background: #0a0e27 (deep blue)
+- Brand colors: Gold #D4A574, Blue #00D9FF, Purple #8B5CF6
+
+ANIMATION NOTES:
+- Use spring animations for smooth motion
+- Stagger text reveals for impact
+- Layer effects for visual richness
+- Match SeederWorks brand identity (gold accents, professional tech aesthetic)
+- Emphasize "browser-based" and "AI-powered" messaging
