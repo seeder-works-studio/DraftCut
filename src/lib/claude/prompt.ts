@@ -7,9 +7,31 @@ function formatAssets(assets: Asset[]): string {
       const dur = a.duration ? `${a.duration}s` : '';
       const dims = a.width && a.height ? `${a.width}x${a.height}` : '';
       const colors = a.colors && a.colors.length > 0 ? `colors: [${a.colors.join(', ')}]` : '';
-      return `- ${a.id}: ${a.type} "${a.filename}" ${dur} ${dims} ${colors}`.trim();
+
+      let assetLine = `- ${a.id}: ${a.type} "${a.filename}" ${dur} ${dims} ${colors}`.trim();
+
+      // Add video analysis if available
+      if (a.videoAnalysis?.analyzed) {
+        const va = a.videoAnalysis;
+        assetLine += `\n  🎬 VIDEO ANALYSIS (USE THIS TO SELECT BEST CLIPS):`;
+        assetLine += `\n     - Overall: ${va.overallTone}, ${va.totalScenes} scenes detected`;
+        assetLine += `\n     - Main subjects: ${va.topSubjects.join(', ')}`;
+        assetLine += `\n     - ${va.bestMomentsCount} great moments identified`;
+        assetLine += `\n     - RECOMMENDED CLIPS (use these timestamps):`;
+
+        // Show top 5 suggested clips
+        const topClips = va.suggestedClips
+          .sort((a, b) => b.interestScore - a.interestScore)
+          .slice(0, 5);
+
+        for (const clip of topClips) {
+          assetLine += `\n       • ${clip.startTime.toFixed(1)}s - ${clip.endTime.toFixed(1)}s (score: ${clip.interestScore.toFixed(1)}/10): ${clip.reason}`;
+        }
+      }
+
+      return assetLine;
     })
-    .join('\n');
+    .join('\n\n');
 }
 
 function formatBrandKit(brandKit?: BrandKit): string {
@@ -157,10 +179,17 @@ export function buildSystemPrompt(
     '- Add captions to slides for context',
     '- Example: 4 images → ImageSlideshow skill with slides array, total 20-30s',
     '',
-    '🎬 FOR VIDEOS:',
-    '- Place video assets on the video track as the base layer',
-    '- If multiple videos: sequence them on the video track',
+    '🎬 FOR VIDEOS (CRITICAL - READ CAREFULLY):',
+    '- ALWAYS check if video has VIDEO ANALYSIS in the assets list above',
+    '- If analysis exists, you MUST use the RECOMMENDED CLIPS timestamps provided',
+    '- Analysis shows interest scores (0-10) - prioritize clips with scores >= 7',
+    '- Use trimStart and trimEnd to extract ONLY the suggested clip segments',
+    '- Example: Video asset has clip suggestion "120s - 135s (score: 8.5/10)" → use trimStart: 120, trimEnd: 135',
+    '- For long videos (>1 min): Extract multiple short clips from different best moments',
+    '- Place video clips on the video track as the base layer',
+    '- If multiple videos: sequence the BEST clips from each on the video track',
     '- Layer animated skills ON TOP for polish',
+    '- DO NOT use entire long videos - always trim to highlighted segments',
     '',
     '🎬 FOR AUDIO:',
     '- Place audio assets on the audio track',
