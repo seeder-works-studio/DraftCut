@@ -18,6 +18,7 @@ import { processWebsiteUrl } from '@/lib/ai/website';
 import { generateMusic } from '@/lib/ai/music';
 import { generateMusicBeatoven } from '@/lib/ai/beatoven';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 function extractUrl(text: string): string | null {
   // Match full URLs first
@@ -57,7 +58,14 @@ export default function HomePage() {
   });
 
   const handleGenerate = async (prompt: string) => {
+    logger.info('HomePage', 'Generation requested', {
+      promptLength: prompt.length,
+      provider: aiConfig.provider,
+      assetCount: assets.length,
+    });
+
     if (!aiConfig.apiKey) {
+      logger.warn('HomePage', 'Generation attempted without API key');
       toast.error('Please enter an API key in Settings');
       return;
     }
@@ -69,11 +77,22 @@ export default function HomePage() {
 
       // Step 1: Detect URLs in prompt, fall back to settings URL
       const detectedUrl = extractUrl(prompt) || websiteUrl.trim() || null;
+      logger.debug('HomePage', 'URL detection', {
+        detectedUrl,
+        hasWebsiteUrl: !!websiteUrl.trim(),
+      });
+
       if (detectedUrl) {
         const targetUrl = detectedUrl;
+        logger.info('HomePage', 'Starting website scrape', { url: targetUrl });
         setStatusMessage('Scraping website...');
         try {
           const websiteData = await processWebsiteUrl(targetUrl);
+          logger.info('HomePage', 'Website scraped successfully', {
+            title: websiteData.title,
+            imageCount: websiteData.images.length,
+            colorCount: websiteData.colors.length,
+          });
 
           websiteContext = {
             title: websiteData.title,
@@ -83,15 +102,22 @@ export default function HomePage() {
 
           // Step 2: Store scraped images as assets
           if (websiteData.images.length > 0) {
+            logger.info('HomePage', 'Saving website images', {
+              count: websiteData.images.length,
+            });
             setStatusMessage('Saving website images...');
             for (const imageFile of websiteData.images) {
               const asset = await saveAsset(imageFile);
               addAsset(asset);
+              logger.debug('HomePage', 'Image asset saved', { assetId: asset.id });
             }
           }
 
           // Step 3: Apply brand colors
           if (websiteData.colors.length > 0) {
+            logger.info('HomePage', 'Applying brand colors', {
+              colors: websiteData.colors,
+            });
             currentBrandKit = {
               ...currentBrandKit,
               primaryColor: websiteData.colors[0],
@@ -101,6 +127,7 @@ export default function HomePage() {
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Website scrape failed';
+          logger.warn('HomePage', 'Website scrape error', { error: msg });
           toast.warning(`Could not scrape website: ${msg}`);
         }
       }
@@ -108,7 +135,13 @@ export default function HomePage() {
       // Step 4: Music generation (Beatoven first, fall back to Replicate)
       const beatovenKey = await loadAPIKey('beatoven');
       const replicateKey = await loadAPIKey('replicate');
+      logger.debug('HomePage', 'Music service availability', {
+        hasBeatoven: !!beatovenKey,
+        hasReplicate: !!replicateKey,
+      });
+
       if (beatovenKey || replicateKey) {
+        logger.info('HomePage', 'Starting music generation');
         setStatusMessage('Generating music...');
         try {
           const musicPrompt = websiteContext
@@ -117,27 +150,44 @@ export default function HomePage() {
           let audioBlob: Blob;
           let filename: string;
           let mimeType: string;
+
           if (beatovenKey) {
+            logger.info('HomePage', 'Using Beatoven for music generation');
             audioBlob = await generateMusicBeatoven(musicPrompt, beatovenKey);
             filename = 'generated-music.mp3';
             mimeType = 'audio/mpeg';
           } else {
+            logger.info('HomePage', 'Using Replicate for music generation');
             audioBlob = await generateMusic(musicPrompt, 20, replicateKey!);
             filename = 'generated-music.wav';
             mimeType = 'audio/wav';
           }
+
+          logger.info('HomePage', 'Music generated successfully', {
+            filename,
+            size: audioBlob.size,
+          });
+
           const audioFile = new File([audioBlob], filename, { type: mimeType });
           const audioAsset = await saveAsset(audioFile);
           addAsset(audioAsset);
+          logger.debug('HomePage', 'Audio asset saved', { assetId: audioAsset.id });
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Music generation failed';
+          logger.error('HomePage', 'Music generation error', { error: msg });
           toast.warning(`Could not generate music: ${msg}`);
         }
       }
 
       // Step 5: Generate video spec with all enriched context
+      logger.info('HomePage', 'Starting video spec generation');
       setStatusMessage('Generating video spec...');
       const allAssets = useProjectStore.getState().assets;
+      logger.debug('HomePage', 'Assets before video generation', {
+        count: allAssets.length,
+        types: allAssets.map((a) => a.type),
+      });
+
       const spec = await generateVideoSpec(
         prompt,
         allAssets,
@@ -147,23 +197,30 @@ export default function HomePage() {
         agenticMode,
         setStatusMessage
       );
+
+      logger.info('HomePage', 'Video spec generated successfully');
       setSpec(spec);
       saveSetting('ai-provider', aiConfig.provider);
       saveSetting('ai-model', aiConfig.model || '');
       toast.success('Video draft generated!');
+      logger.info('HomePage', 'Navigating to editor');
       router.push('/editor');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Generation failed';
+      logger.error('HomePage', 'Generation error', { error: message, stack: (err as Error).stack });
       toast.error(message);
     } finally {
+      logger.info('HomePage', 'Generation completed');
       setIsGenerating(false);
       setStatusMessage(undefined);
     }
   };
 
   const handleLoadExample = () => {
+    logger.info('HomePage', 'Loading example project');
     setSpec(exampleProjectSpec);
     toast.success('Example project loaded');
+    logger.info('HomePage', 'Navigating to editor with example project');
     router.push('/editor');
   };
 

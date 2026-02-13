@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
+import { logger } from '@/lib/logger';
 
 export interface ChatMessage {
   id: string;
@@ -29,12 +30,30 @@ export const useChatStore = create<ChatState>((set) => ({
     model: 'claude-sonnet-4-5-20250929',
   },
 
-  addMessage: (message) =>
-    set((state) => ({ messages: [...state.messages, message] })),
+  addMessage: (message) => {
+    logger.debug('ChatStore', 'Adding chat message', {
+      role: message.role,
+      contentLength: message.content.length,
+      specJson: message.specJson,
+    });
+    set((state) => ({ messages: [...state.messages, message] }));
+  },
 
-  clearMessages: () => set({ messages: [] }),
+  clearMessages: () => {
+    logger.info('ChatStore', 'Clearing all chat messages');
+    set({ messages: [] });
+  },
 
-  setIsGenerating: (isGenerating) => set({ isGenerating }),
+  setIsGenerating: (isGenerating) => {
+    logger.info('ChatStore', `Chat generation ${isGenerating ? 'started' : 'completed'}`);
+    set({ isGenerating });
+  },
 
-  setAiConfig: (aiConfig) => set({ aiConfig }),
+  setAiConfig: (aiConfig) => {
+    logger.info('ChatStore', 'Setting AI configuration', {
+      provider: aiConfig.provider,
+      model: aiConfig.model,
+    });
+    set({ aiConfig });
+  },
 }));

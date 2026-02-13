@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger } from '@/lib/logger';
 
 interface EditorState {
   currentTime: number;
@@ -19,9 +20,26 @@ export const useEditorStore = create<EditorState>((set) => ({
   selectedClipId: null,
   pixelsPerSecond: 100,
 
-  setCurrentTime: (currentTime) => set({ currentTime }),
-  setIsPlaying: (isPlaying) => set({ isPlaying }),
-  togglePlayback: () => set((s) => ({ isPlaying: !s.isPlaying })),
-  setSelectedClipId: (selectedClipId) => set({ selectedClipId }),
-  setPixelsPerSecond: (pixelsPerSecond) => set({ pixelsPerSecond }),
+  setCurrentTime: (currentTime) => {
+    logger.debug('EditorStore', 'Setting current time', { time: currentTime.toFixed(2) });
+    set({ currentTime });
+  },
+  setIsPlaying: (isPlaying) => {
+    logger.info('EditorStore', `Playback ${isPlaying ? 'started' : 'paused'}`);
+    set({ isPlaying });
+  },
+  togglePlayback: () => {
+    set((s) => {
+      logger.info('EditorStore', `Playback toggled to ${!s.isPlaying ? 'play' : 'pause'}`);
+      return { isPlaying: !s.isPlaying };
+    });
+  },
+  setSelectedClipId: (selectedClipId) => {
+    logger.debug('EditorStore', 'Selected clip changed', { clipId: selectedClipId });
+    set({ selectedClipId });
+  },
+  setPixelsPerSecond: (pixelsPerSecond) => {
+    logger.debug('EditorStore', 'Timeline zoom changed', { pixelsPerSecond });
+    set({ pixelsPerSecond });
+  },
 }));

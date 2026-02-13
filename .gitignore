@@ -40,3 +40,10 @@ test/promo-raw.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# demo assets
+/Demo/*.mp4
+/Demo/*.webm
+/Demo/*.png
+/Demo/*.jpg
+/Demo/prompt.txt

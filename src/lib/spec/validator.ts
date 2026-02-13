@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ProjectSpec } from './types';
+import { logger } from '@/lib/logger';
 
 const AssetSchema = z.object({
   id: z.string(),
@@ -79,7 +80,32 @@ const ProjectSpecSchema = z.object({
 });
 
 export function validateProjectSpec(data: unknown): ProjectSpec {
-  return ProjectSpecSchema.parse(data) as ProjectSpec;
+  logger.debug('Validator', 'Starting validation of ProjectSpec');
+  try {
+    const result = ProjectSpecSchema.parse(data) as ProjectSpec;
+    logger.info('Validator', 'ProjectSpec validation successful', {
+      version: result.version,
+      canvasDuration: result.canvas.duration,
+      assetCount: result.assets.length,
+      trackCount: result.composition.tracks.length,
+      totalClips: result.composition.tracks.reduce((sum, t) => sum + t.clips.length, 0),
+    });
+    return result;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      logger.error('Validator', 'ProjectSpec validation failed', {
+        errorCount: error.errors.length,
+        errors: error.errors.map((e) => ({
+          path: e.path.join('.'),
+          message: e.message,
+          code: e.code,
+        })),
+      });
+    } else {
+      logger.error('Validator', 'Unexpected validation error', error);
+    }
+    throw error;
+  }
 }
 
 export { ProjectSpecSchema, ClipSchema, TrackSchema, AssetSchema, BrandKitSchema };

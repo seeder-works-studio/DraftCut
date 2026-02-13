@@ -6,6 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 DraftCut is an AI-powered video editor that runs entirely in the browser. Users describe a video concept, upload assets (images/videos/audio), and AI generates a structured video specification that gets rendered using Remotion. All data is stored locally in IndexedDB—nothing is sent to any server except for AI generation requests.
 
+### Additional Documentation
+- **[AGENTIC-VIDEO-SYSTEM.md](./AGENTIC-VIDEO-SYSTEM.md)** - AI-powered iterative video refinement system (chat-based editing)
+- **[TESTING-EXPORT.md](./TESTING-EXPORT.md)** - Export functionality testing guide
+- **[API-KEYS.md](./API-KEYS.md)** - API key configuration for all providers
+- **[DIFFUSION-STUDIOS-INTEGRATION.md](./DIFFUSION-STUDIOS-INTEGRATION.md)** - MP4 export integration (in development)
+
 ## Core Architecture
 
 ### Tech Stack
@@ -57,6 +63,8 @@ DraftCut is an AI-powered video editor that runs entirely in the browser. Users 
 
 **chat-store** (`src/stores/chat-store.ts`): AI chat interface in editor
 - Messages for iterating on the video with AI
+- Enables agentic video refinement—AI analyzes current video and suggests improvements
+- See [AGENTIC-VIDEO-SYSTEM.md](./AGENTIC-VIDEO-SYSTEM.md) for detailed documentation
 
 ### Storage Layer (`src/lib/storage/`)
 
@@ -91,6 +99,21 @@ Handles API routes since Next.js static export doesn't support API routes:
 - `/api/proxy-image` - CORS proxy for fetching external images
 
 Static assets served from `./out` directory with SPA fallback routing.
+
+## Environment Setup
+
+### Prerequisites
+- Node.js 18+ (for development)
+- Modern browser (Chrome, Edge, or Safari for WebM export support)
+- API keys for at least one AI provider (see [API-KEYS.md](./API-KEYS.md))
+
+### Configuration
+1. Install dependencies: `npm install`
+2. Copy `.env.example` to `.env.local` (if it exists) and add your API keys:
+   - `CLAUDE_API_KEY` - Anthropic API key
+   - `GEMINI_API_KEY` - Google Gemini API key
+   - Or other provider keys as needed
+3. For E2E tests, API keys are loaded from `.env` into IndexedDB during test setup
 
 ## Development Commands
 
@@ -245,6 +268,76 @@ npx playwright test --headed
 # Debug mode (step through test)
 npx playwright test --debug
 ```
+
+See [TESTING-EXPORT.md](./TESTING-EXPORT.md) for comprehensive export testing procedures.
+
+## Debugging & Common Issues
+
+### Remotion Rendering Issues
+- **Canvas capture failing**: Check browser console for security errors. Some localhost setups may require HTTPS for canvas access in certain environments.
+- **Skills not rendering**: Verify skill is registered in `src/skills/registry.ts` and component exports correctly
+- **Timeline duration mismatch**: Ensure all clips have `startTime` and `duration` set (in seconds), and check `canvas.duration` matches the composition length
+
+### IndexedDB Issues
+- **Storage quota exceeded**: User's browser IndexedDB quota is full. Suggest clearing old projects or using a different browser profile
+- **Blob URL revocation**: Watch for "blob URL revoked" errors—ensure `URL.revokeObjectURL()` isn't called before playback completes. Use `useAssetLoader` hook for proper blob URL lifecycle management
+- **Cross-origin asset loading**: Remote images must have proper CORS headers. Use `/api/proxy-image` worker endpoint for CORS issues
+
+### Asset Management
+- **Missing assets in timeline**: Check that `assetId` in clips matches asset IDs in the project store
+- **Audio not playing**: Audio tracks render but don't export yet—see roadmap. For preview, check audio codec compatibility
+- **Large file performance**: Video files over 500MB may cause browser slowdown. Consider recommending MP4 compression to users
+
+### State Management
+- **Stale UI after spec update**: Zustand stores may not re-render if updater function mutates instead of creating new object. Always use spread operator: `...spec` not direct mutation
+- **Lost changes on browser back**: Use `useAutosave` hook to persist to IndexedDB. Check that auto-save interval is appropriate for the machine
+
+### Export Functionality
+- **WebM export incomplete**: See [TESTING-EXPORT.md](./TESTING-EXPORT.md) for detailed testing procedures
+- **Skills not rendering in export**: Only ImageSlideshow skill fully exports to WebM. Other skills render as placeholders. MP4 export with Diffusion Studios will support full skill rendering
+- **Audio missing in export**: Audio mixing not yet implemented (roadmap item). Export currently includes video track only
+
+## Media Services Configuration
+
+### Implemented Services
+- **Music Generation**: Beatoven.ai and Replicate (FAL) - Fully integrated, can be triggered via AI prompt
+- **Website Scraping**: Cloudflare Worker proxy for extracting brand kits from URLs—fully working
+- **Voice Narration**: ElevenLabs integration exists but not exposed in UI (roadmap)
+
+### Partially Implemented
+- **Auto-captions**: ElevenLabs integration framework in place, awaiting full implementation
+- **MP4 Export**: Diffusion Studios SDK integrated, MP4 export in progress (see DIFFUSION-STUDIOS-INTEGRATION.md)
+
+### Adding a New Media Service
+1. Create service client in `src/lib/ai/{service}.ts` with configuration type
+2. Add API key storage via `src/lib/storage/api-keys.ts`
+3. Add UI controls in `src/components/home/media-services-config.tsx` if user-facing
+4. Integrate into generation flow: either call directly in `src/lib/claude/client.ts` or include in system prompt for AI to orchestrate
+5. Document API key requirements in [API-KEYS.md](./API-KEYS.md)
+
+## Agentic Video Refinement System
+
+DraftCut includes an iterative AI refinement system (like Claude Code for videos) that allows users to improve their generated videos through chat in the editor.
+
+### How It Works
+1. After video generation, user can chat with AI in the editor
+2. AI analyzes the current video spec and provides suggestions for improvement
+3. User describes desired changes (e.g., "Make the intro longer", "Add more Ken Burns effects")
+4. AI generates updated ProjectSpec JSON based on feedback
+5. Editor preview updates in real-time
+6. Process repeats until user is satisfied
+
+### Key Components
+- **chat-store** (`src/stores/chat-store.ts`): Maintains conversation history
+- **Chat Panel** (`src/components/editor/chat-panel.tsx`): UI for sending messages and viewing responses
+- **AI Analysis** (`src/lib/claude/chat.ts`): Analyzes current spec and generates improvements
+
+### Important Notes
+- Agentic refinement currently supports Claude provider—OpenRouter and other providers via OpenAI-compatible API also supported
+- Version history for tracking iterations is on the roadmap
+- Each refinement generates a new complete ProjectSpec (full rewrite, not incremental patches)
+
+See [AGENTIC-VIDEO-SYSTEM.md](./AGENTIC-VIDEO-SYSTEM.md) for complete system documentation.
 
 ## Adding New Features
 
