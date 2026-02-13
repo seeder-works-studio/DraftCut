@@ -58,7 +58,7 @@ export async function generateVideoSpec(
 
       const response = await client.messages.create({
         model: config.model || 'claude-sonnet-4-5-20250929',
-        max_tokens: 4096,
+        max_tokens: 8192, // Increased for complex multi-skill videos
         temperature: 0.7,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
@@ -102,7 +102,7 @@ export async function generateVideoSpec(
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
-          max_tokens: 4096,
+          max_tokens: 8192, // Increased for complex multi-skill videos
         }),
       });
 
