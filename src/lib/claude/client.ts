@@ -162,6 +162,15 @@ export async function generateVideoSpec(
     }
 
     if (Array.isArray(spec.assets)) {
+      // Transform assets: some AIs use 'name' instead of 'filename'
+      spec.assets = spec.assets.map((a: any) => {
+        if (a && typeof a === 'object' && 'name' in a && !('filename' in a)) {
+          return { ...a, filename: a.name };
+        }
+        return a;
+      });
+
+      // Filter out invalid assets
       spec.assets = spec.assets.filter(
         (a: unknown) =>
           typeof a === 'object' &&
