@@ -45,9 +45,9 @@ export default function HomePage() {
     useProjectStore();
 
   const [aiConfig, setAiConfig] = useState<AIProviderConfig>({
-    provider: 'gemini',
+    provider: 'claude',
     apiKey: '',
-    model: 'gemini-2.5-flash',
+    model: 'claude-sonnet-4-5-20250929',
   });
 
   const [brandKit, setBrandKit] = useState<BrandKit>({
@@ -73,8 +73,8 @@ export default function HomePage() {
         const savedProvider = (await loadAPIKey('ai-provider')) as string | undefined;
         const savedModel = (await loadAPIKey('ai-model')) as string | undefined;
 
-        // Try to load API key for the saved provider, or fall back to gemini
-        const provider = savedProvider || 'gemini';
+        // Try to load API key for the saved provider, or fall back to claude
+        const provider = savedProvider || 'claude';
         const apiKey = await loadAPIKey(provider);
 
         if (apiKey) {
@@ -82,7 +82,7 @@ export default function HomePage() {
           setAiConfig({
             provider: provider as any,
             apiKey,
-            model: savedModel || (provider === 'gemini' ? 'gemini-2.5-flash' : 'claude-sonnet-4-5-20250929'),
+            model: savedModel || (provider === 'claude' ? 'claude-sonnet-4-5-20250929' : 'gemini-2.5-flash'),
           });
         }
       } catch (err) {
