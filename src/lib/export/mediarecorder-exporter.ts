@@ -425,6 +425,10 @@ async function renderRemotionSkillToCanvas(
     // Calculate frame relative to clip start
     const durationInFrames = Math.ceil(clip.duration * spec.canvas.fps);
 
+    // CRITICAL: Clamp frame to valid range [0, durationInFrames)
+    // Negative frames cause "inputRange must be strictly monotonically increasing" errors
+    const clampedFrame = Math.max(0, Math.min(frame, durationInFrames - 1));
+
     // Inject assetBlobUrls into skill props
     const enhancedProps = {
       ...(clip.skillProps || skillDef.defaultProps),
@@ -442,7 +446,7 @@ async function renderRemotionSkillToCanvas(
           fps: spec.canvas.fps,
           compositionWidth: spec.canvas.width,
           compositionHeight: spec.canvas.height,
-          initialFrame: frame,
+          initialFrame: clampedFrame,
           controls: false,
           autoPlay: false,
           style: {

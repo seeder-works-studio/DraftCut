@@ -28,6 +28,7 @@ import {
   isMediaRecorderSupported,
   exportWithMediaRecorder,
 } from '@/lib/export/mediarecorder-exporter';
+import { loadAsset } from '@/lib/storage/assets';
 
 interface ExportDialogProps {
   open: boolean;
@@ -73,12 +74,37 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     setProgress(0);
 
     try {
+      // CRITICAL: Ensure all assets are loaded before export
+      toast.info('Loading assets...');
+      const loadedBlobUrls: Record<string, string> = { ...assetBlobUrls };
+
+      for (const asset of spec.assets) {
+        if (!loadedBlobUrls[asset.id]) {
+          const result = await loadAsset(asset.id);
+          if (result) {
+            loadedBlobUrls[asset.id] = URL.createObjectURL(result.blob);
+          } else {
+            toast.error(`Failed to load asset: ${asset.filename}`);
+            return;
+          }
+        }
+      }
+
+      // Update store with loaded blob URLs
+      const setAssetBlobUrl = useProjectStore.getState().setAssetBlobUrl;
+      for (const [id, url] of Object.entries(loadedBlobUrls)) {
+        if (!assetBlobUrls[id]) {
+          setAssetBlobUrl(id, url);
+        }
+      }
+
+      try {
       if (exportMethod === 'webm' && mediaRecorderSupported) {
         // Export with MediaRecorder (WebM, browser-based)
         toast.info('Starting WebM export (YouTube-compatible)...');
 
         const videoBlob = await exportWithMediaRecorder(
-          { spec, assetBlobUrls },
+          { spec, assetBlobUrls: loadedBlobUrls },
           {
             quality: quality as 'low' | 'medium' | 'high',
             onProgress: (p) => setProgress(p * 100),
@@ -100,7 +126,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         toast.info('Starting MP4 export with hardware acceleration...');
 
         const videoBlob = await exportWithDiffusionStudios(
-          { spec, assetBlobUrls },
+          { spec, assetBlobUrls: loadedBlobUrls },
           {
             quality: quality as 'low' | 'medium' | 'high' | 'ultra',
             format: 'mp4',
@@ -122,10 +148,15 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         // Fallback to JSON export
         await handleExportJSON();
       }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Export failed';
+        toast.error(message);
+        console.error('Export error:', err);
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Export failed';
+      const message = err instanceof Error ? err.message : 'Failed to load assets';
       toast.error(message);
-      console.error('Export error:', err);
+      console.error('Asset loading error:', err);
     } finally {
       setIsExporting(false);
       setProgress(0);
