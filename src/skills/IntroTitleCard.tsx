@@ -92,8 +92,8 @@ export const IntroTitleCard: React.FC<IntroTitleCardProps> = ({
           <Img
             src={assetBlobUrls[logoAssetId] || logoAssetId}
             style={{
-              width: 120,
-              height: 120,
+              width: 160,
+              height: 160,
               objectFit: 'contain',
             }}
           />
@@ -103,7 +103,7 @@ export const IntroTitleCard: React.FC<IntroTitleCardProps> = ({
       {/* Title */}
       <h1
         style={{
-          fontSize: 84,
+          fontSize: 108,
           fontWeight: 900,
           color: titleColor,
           transform: `translateY(${titleY}px) scale(${titleScale * pulseIntensity * exitScale})`,
@@ -136,7 +136,7 @@ export const IntroTitleCard: React.FC<IntroTitleCardProps> = ({
       {subtitle && (
         <h2
           style={{
-            fontSize: 42,
+            fontSize: 56,
             color: subtitleColor,
             opacity: subtitleOpacity,
             transform: `translateY(${subtitleY}px) scale(${exitScale})`,

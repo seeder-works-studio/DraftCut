@@ -17,7 +17,7 @@ export interface TextRevealProps {
 export const TextReveal: React.FC<TextRevealProps> = ({
   text,
   style,
-  fontSize = 64,
+  fontSize = 96,
   fontFamily = 'Inter, sans-serif',
   color = '#ffffff',
   backgroundColor = 'transparent',

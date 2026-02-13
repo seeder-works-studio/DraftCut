@@ -79,8 +79,8 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
           <Img
             src={assetBlobUrls[logoAssetId] || logoAssetId}
             style={{
-              width: 100,
-              height: 100,
+              width: 140,
+              height: 140,
               objectFit: 'contain',
             }}
           />
@@ -90,7 +90,7 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
       {/* Heading */}
       <h2
         style={{
-          fontSize: 64,
+          fontSize: 84,
           fontWeight: 'bold',
           color: textColor,
           transform: `translateY(${headingY}px)`,
@@ -132,8 +132,8 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
             position: 'relative',
             backgroundColor: buttonColor,
             color: buttonTextColor,
-            padding: '20px 60px',
-            fontSize: 36,
+            padding: '24px 72px',
+            fontSize: 42,
             fontWeight: 'bold',
             borderRadius: 8,
             boxShadow: `0 8px 32px ${buttonColor}60`,

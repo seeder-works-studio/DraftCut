@@ -43,7 +43,7 @@ const CaptionPropsSchema = z.object({
       })
     )
     .default([{ text: 'Hello World', startTime: 0, duration: 3 }]),
-  fontSize: z.number().default(48),
+  fontSize: z.number().default(64),
   fontFamily: z.string().default('sans-serif'),
   color: z.string().default('#ffffff'),
   backgroundColor: z.string().optional(),
@@ -101,7 +101,7 @@ const ImageSlideshowPropsSchema = z.object({
 const TextRevealPropsSchema = z.object({
   text: z.string().default('Hello World'),
   style: z.enum(['typewriter', 'fadeIn', 'slideUp', 'wordPop', 'glitch']).default('fadeIn'),
-  fontSize: z.number().optional().default(64),
+  fontSize: z.number().optional().default(96),
   fontFamily: z.string().optional().default('Inter, sans-serif'),
   color: z.string().optional().default('#ffffff'),
   backgroundColor: z.string().optional().default('transparent'),
@@ -124,7 +124,7 @@ const KineticTypographyPropsSchema = z.object({
   animationStyle: z.enum(['bounce', 'scale', 'rotate', 'slide', 'fade']).optional().default('bounce'),
   timing: z.enum(['word', 'line']).optional().default('line'),
   stagger: z.number().optional().default(15),
-  fontSize: z.number().optional().default(64),
+  fontSize: z.number().optional().default(96),
   fontFamily: z.string().optional().default('Inter, sans-serif'),
   color: z.string().optional().default('#ffffff'),
   backgroundColor: z.string().optional().default('transparent'),
@@ -136,7 +136,7 @@ const KineticTypographyPropsSchema = z.object({
 const BrandLogoPropsSchema = z.object({
   logoAssetId: z.string().default(''),
   animationType: z.enum(['bounce', 'pulse', 'slide', 'rotate', 'fade']).optional().default('bounce'),
-  scale: z.number().optional().default(1),
+  scale: z.number().optional().default(1.5),
   position: z.enum(['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right']).optional().default('center'),
   loop: z.boolean().optional().default(false),
 });

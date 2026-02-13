@@ -1,8 +1,8 @@
-Create a professional 45-second promo video for DraftCut, the AI-powered video editor by SeederWorks.
+Create a professional 20-second promo video for DraftCut, the AI-powered video editor by SeederWorks.
 
 Start with an animated title card showing "DraftCut - AI-Powered Video Editor" with the SeederWorks logo, using gold and blue colors on a dark blue background.
 
-Then show a terminal window sliding in with the command "npx draftcut generate" demonstrating how easy it is to use.
+Then show a web browser sliding in with the draft cut UX, attached demonstrating how easy it is to use.
 
 Add animated text that says "Turn text into video in DraftCut - No editing skills needed" with each line appearing with a bounce effect. Make "DraftCut" stand out in gold color.
 
@@ -10,16 +10,4 @@ Show the screenshots as a slideshow with cinematic zoom and pan effects. Overlay
 
 Display an animated counter counting up to "100%" with text saying "Browser-based rendering", then show a progress bar at 95% labeled "Export Quality".
 
-Add the SeederWorks logo with a subtle pulse animation, with a name tag saying "SeederWorks - Venture Studio" at the bottom.
-
-Show text reveals highlighting "12 professional skills" and "Export to WebM instantly".
-
-End with a strong call-to-action card saying "Start Creating Today - Try DraftCut" with the SeederWorks logo and a gold button.
-
-Use these brand colors:
-- Gold: #D4A574 for accents and branding
-- Blue: #00D9FF for modern tech feel
-- Purple: #8B5CF6 for highlights
-- Deep blue: #0a0e27 for background
-
-Make it dynamic, professional, and showcase the power of DraftCut!
+Add the SeederWorks logo that is attached  with a subtle pulse animation, with a name tag saying "SeederWorks - Venture Studio" at the bottom.
