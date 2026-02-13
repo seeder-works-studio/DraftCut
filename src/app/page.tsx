@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PromptInput } from '@/components/home/prompt-input';
 import { AssetUploader, AssetList } from '@/components/home/asset-uploader';
@@ -56,6 +56,33 @@ export default function HomePage() {
     targetScore: 85,
     maxIterations: 5,
   });
+
+  // Load API key from IndexedDB on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const savedProvider = (await loadAPIKey('ai-provider')) as string | undefined;
+        const savedModel = (await loadAPIKey('ai-model')) as string | undefined;
+
+        // Try to load API key for the saved provider, or fall back to gemini
+        const provider = savedProvider || 'gemini';
+        const apiKey = await loadAPIKey(provider);
+
+        if (apiKey) {
+          logger.info('HomePage', 'Loaded API key from storage', { provider });
+          setAiConfig({
+            provider: provider as any,
+            apiKey,
+            model: savedModel || (provider === 'gemini' ? 'gemini-2.5-flash' : 'claude-sonnet-4-5-20250929'),
+          });
+        }
+      } catch (err) {
+        logger.warn('HomePage', 'Failed to load settings from storage', err);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const handleGenerate = async (prompt: string) => {
     logger.info('HomePage', 'Generation requested', {
