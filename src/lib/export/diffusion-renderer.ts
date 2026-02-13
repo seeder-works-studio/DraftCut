@@ -37,6 +37,14 @@ const QUALITY_PRESETS = {
  * Convert any color format to hex (Diffusion Studios only supports hex)
  */
 function normalizeColorToHex(color: string): `#${string}` {
+  if (!color || typeof color !== 'string') {
+    console.warn('Invalid color value, using fallback:', color);
+    return '#8B5CF6';
+  }
+
+  // Trim whitespace
+  color = color.trim();
+
   // Already hex
   if (color.startsWith('#')) {
     return color as `#${string}`;
@@ -49,8 +57,14 @@ function normalizeColorToHex(color: string): `#${string}` {
 
   // LAB colors are not supported by Canvas API - convert to fallback
   if (color.startsWith('lab(') || color.startsWith('lch(') || color.startsWith('oklab(') || color.startsWith('oklch(')) {
-    console.warn(`LAB color detected and converted to fallback: ${color}`);
+    console.warn(`LAB/OKLCH color detected and converted to fallback: ${color}`);
     return '#8B5CF6'; // Purple fallback (brand color)
+  }
+
+  // Check for CSS variable usage (e.g., "var(--primary)")
+  if (color.startsWith('var(')) {
+    console.warn(`CSS variable detected, using fallback: ${color}`);
+    return '#8B5CF6';
   }
 
   // RGB, RGBA, HSL, etc - convert using canvas
@@ -79,43 +93,62 @@ function normalizeColorToHex(color: string): `#${string}` {
 }
 
 /**
+ * Recursively sanitize colors in nested objects
+ */
+function sanitizeObjectColors(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+
+  if (typeof obj === 'string') {
+    // Check if this looks like a color
+    if (obj.startsWith('#') ||
+        obj.startsWith('rgb') ||
+        obj.startsWith('hsl') ||
+        obj.startsWith('lab') ||
+        obj.startsWith('lch') ||
+        obj.startsWith('oklab') ||
+        obj.startsWith('oklch') ||
+        obj.startsWith('var(') ||
+        obj === 'transparent') {
+      return normalizeColorToHex(obj);
+    }
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeObjectColors(item));
+  }
+
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Always sanitize if key suggests it's a color
+      if (typeof value === 'string' && (
+        key.toLowerCase().includes('color') ||
+        key.toLowerCase().includes('background') ||
+        key.toLowerCase().includes('fill') ||
+        key.toLowerCase().includes('stroke')
+      )) {
+        result[key] = normalizeColorToHex(value);
+      } else {
+        result[key] = sanitizeObjectColors(value);
+      }
+    }
+    return result;
+  }
+
+  return obj;
+}
+
+/**
  * Sanitize all colors in the spec to hex format
  */
 function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
-  const sanitized = JSON.parse(JSON.stringify(spec)) as ProjectSpec;
+  console.log('Sanitizing spec colors...');
 
-  // Sanitize canvas background
-  if (sanitized.canvas.backgroundColor) {
-    sanitized.canvas.backgroundColor = normalizeColorToHex(sanitized.canvas.backgroundColor);
-  }
+  // Deep clone and sanitize recursively
+  const sanitized = sanitizeObjectColors(JSON.parse(JSON.stringify(spec))) as ProjectSpec;
 
-  // Sanitize brand kit colors
-  if (sanitized.brandKit) {
-    if (sanitized.brandKit.primaryColor) {
-      sanitized.brandKit.primaryColor = normalizeColorToHex(sanitized.brandKit.primaryColor);
-    }
-    if (sanitized.brandKit.secondaryColor) {
-      sanitized.brandKit.secondaryColor = normalizeColorToHex(sanitized.brandKit.secondaryColor);
-    }
-  }
-
-  // Sanitize skill props colors
-  for (const track of sanitized.composition.tracks) {
-    for (const clip of track.clips) {
-      if (clip.skillProps && typeof clip.skillProps === 'object') {
-        const props = clip.skillProps as Record<string, unknown>;
-        for (const [key, value] of Object.entries(props)) {
-          if (typeof value === 'string' && (
-            key.toLowerCase().includes('color') ||
-            key.toLowerCase().includes('background')
-          )) {
-            props[key] = normalizeColorToHex(value);
-          }
-        }
-      }
-    }
-  }
-
+  console.log('Color sanitization complete');
   return sanitized;
 }
 

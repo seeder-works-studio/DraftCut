@@ -15,6 +15,14 @@ import html2canvas from 'html2canvas';
  * Convert any color format to hex (for Remotion compatibility)
  */
 function normalizeColorToHex(color: string): string {
+  if (!color || typeof color !== 'string') {
+    console.warn('Invalid color value, using fallback:', color);
+    return '#8B5CF6';
+  }
+
+  // Trim whitespace
+  color = color.trim();
+
   // Already hex
   if (color.startsWith('#')) {
     return color;
@@ -27,8 +35,14 @@ function normalizeColorToHex(color: string): string {
 
   // LAB colors are not supported by Canvas API - convert to fallback
   if (color.startsWith('lab(') || color.startsWith('lch(') || color.startsWith('oklab(') || color.startsWith('oklch(')) {
-    console.warn(`LAB color detected and converted to fallback: ${color}`);
+    console.warn(`LAB/OKLCH color detected and converted to fallback: ${color}`);
     return '#8B5CF6'; // Purple fallback (brand color)
+  }
+
+  // Check for CSS variable usage (e.g., "var(--primary)")
+  if (color.startsWith('var(')) {
+    console.warn(`CSS variable detected, using fallback: ${color}`);
+    return '#8B5CF6';
   }
 
   // RGB, RGBA, HSL, etc - convert using canvas
@@ -57,43 +71,62 @@ function normalizeColorToHex(color: string): string {
 }
 
 /**
+ * Recursively sanitize colors in nested objects
+ */
+function sanitizeObjectColors(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+
+  if (typeof obj === 'string') {
+    // Check if this looks like a color
+    if (obj.startsWith('#') ||
+        obj.startsWith('rgb') ||
+        obj.startsWith('hsl') ||
+        obj.startsWith('lab') ||
+        obj.startsWith('lch') ||
+        obj.startsWith('oklab') ||
+        obj.startsWith('oklch') ||
+        obj.startsWith('var(') ||
+        obj === 'transparent') {
+      return normalizeColorToHex(obj);
+    }
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeObjectColors(item));
+  }
+
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Always sanitize if key suggests it's a color
+      if (typeof value === 'string' && (
+        key.toLowerCase().includes('color') ||
+        key.toLowerCase().includes('background') ||
+        key.toLowerCase().includes('fill') ||
+        key.toLowerCase().includes('stroke')
+      )) {
+        result[key] = normalizeColorToHex(value);
+      } else {
+        result[key] = sanitizeObjectColors(value);
+      }
+    }
+    return result;
+  }
+
+  return obj;
+}
+
+/**
  * Sanitize all colors in the spec to hex format
  */
 function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
-  const sanitized = JSON.parse(JSON.stringify(spec)) as ProjectSpec;
+  console.log('Sanitizing spec colors...');
 
-  // Sanitize canvas background
-  if (sanitized.canvas.backgroundColor) {
-    sanitized.canvas.backgroundColor = normalizeColorToHex(sanitized.canvas.backgroundColor);
-  }
+  // Deep clone and sanitize recursively
+  const sanitized = sanitizeObjectColors(JSON.parse(JSON.stringify(spec))) as ProjectSpec;
 
-  // Sanitize brand kit colors
-  if (sanitized.brandKit) {
-    if (sanitized.brandKit.primaryColor) {
-      sanitized.brandKit.primaryColor = normalizeColorToHex(sanitized.brandKit.primaryColor);
-    }
-    if (sanitized.brandKit.secondaryColor) {
-      sanitized.brandKit.secondaryColor = normalizeColorToHex(sanitized.brandKit.secondaryColor);
-    }
-  }
-
-  // Sanitize skill props colors
-  for (const track of sanitized.composition.tracks) {
-    for (const clip of track.clips) {
-      if (clip.skillProps && typeof clip.skillProps === 'object') {
-        const props = clip.skillProps as Record<string, unknown>;
-        for (const [key, value] of Object.entries(props)) {
-          if (typeof value === 'string' && (
-            key.toLowerCase().includes('color') ||
-            key.toLowerCase().includes('background')
-          )) {
-            props[key] = normalizeColorToHex(value);
-          }
-        }
-      }
-    }
-  }
-
+  console.log('Color sanitization complete');
   return sanitized;
 }
 
@@ -253,8 +286,13 @@ async function preloadMediaElements(
   for (const track of spec.composition.tracks) {
     for (const clip of track.clips) {
       if (clip.type === 'video' && clip.assetId) {
+        const blobUrl = assetBlobUrls[clip.assetId];
+        if (!blobUrl) {
+          console.error(`Video asset blob URL not found: ${clip.assetId}`);
+          throw new Error(`Video asset not loaded: ${clip.assetId}`);
+        }
         const video = document.createElement('video');
-        video.src = assetBlobUrls[clip.assetId];
+        video.src = blobUrl;
         video.muted = true;
         video.preload = 'auto';
         await new Promise((resolve, reject) => {
@@ -262,15 +300,26 @@ async function preloadMediaElements(
             // Ensure enough data is loaded for frame-accurate seeking
             video.oncanplaythrough = resolve;
           };
-          video.onerror = reject;
+          video.onerror = (e) => {
+            console.error(`Failed to load video ${clip.assetId}:`, e);
+            reject(new Error(`Failed to load video: ${clip.assetId}`));
+          };
         });
         elements.set(clip.assetId, video);
       } else if (clip.type === 'image' && clip.assetId) {
+        const blobUrl = assetBlobUrls[clip.assetId];
+        if (!blobUrl) {
+          console.error(`Image asset blob URL not found: ${clip.assetId}`);
+          throw new Error(`Image asset not loaded: ${clip.assetId}`);
+        }
         const img = new Image();
-        img.src = assetBlobUrls[clip.assetId];
+        img.src = blobUrl;
         await new Promise((resolve, reject) => {
           img.onload = resolve;
-          img.onerror = reject;
+          img.onerror = (e) => {
+            console.error(`Failed to load image ${clip.assetId} from ${blobUrl}:`, e);
+            reject(new Error(`Failed to load image: ${clip.assetId}`));
+          };
         });
         elements.set(clip.assetId, img);
       } else if (clip.type === 'skill' && clip.skillType === 'ImageSlideshow') {
@@ -278,11 +327,19 @@ async function preloadMediaElements(
         const slides = (clip.skillProps as any)?.slides || [];
         for (const slide of slides) {
           if (slide.assetId && !elements.has(slide.assetId)) {
+            const blobUrl = assetBlobUrls[slide.assetId];
+            if (!blobUrl) {
+              console.error(`ImageSlideshow asset blob URL not found: ${slide.assetId}`);
+              throw new Error(`ImageSlideshow asset not loaded: ${slide.assetId}`);
+            }
             const img = new Image();
-            img.src = assetBlobUrls[slide.assetId];
+            img.src = blobUrl;
             await new Promise((resolve, reject) => {
               img.onload = resolve;
-              img.onerror = reject;
+              img.onerror = (e) => {
+                console.error(`Failed to load ImageSlideshow image ${slide.assetId} from ${blobUrl}:`, e);
+                reject(new Error(`Failed to load ImageSlideshow image: ${slide.assetId}`));
+              };
             });
             elements.set(slide.assetId, img);
           }
@@ -480,8 +537,11 @@ async function renderSkillClip(
     return;
   }
 
+  // Calculate frame relative to clip start (CRITICAL FIX)
+  const clipFrame = Math.floor(clipTime * spec.canvas.fps);
+
   // For other skills, render using Remotion Player + html2canvas
-  await renderRemotionSkillToCanvas(ctx, clip, currentFrame, spec, assetBlobUrls);
+  await renderRemotionSkillToCanvas(ctx, clip, clipFrame, spec, assetBlobUrls);
 }
 
 /**
@@ -516,7 +576,9 @@ async function renderRemotionSkillToCanvas(
 
     // CRITICAL: Clamp frame to valid range [0, durationInFrames)
     // Negative frames cause "inputRange must be strictly monotonically increasing" errors
-    const clampedFrame = Math.max(0, Math.min(frame, durationInFrames - 1));
+    // Ensure we have at least 1 frame
+    const safeDuration = Math.max(1, durationInFrames);
+    const clampedFrame = Math.max(0, Math.min(frame, safeDuration - 1));
 
     // Inject assetBlobUrls into skill props
     const enhancedProps = {
@@ -524,30 +586,41 @@ async function renderRemotionSkillToCanvas(
       assetBlobUrls,
     };
 
+    // Validate parameters before rendering
+    if (clampedFrame < 0 || clampedFrame >= safeDuration) {
+      console.error(`Invalid frame number: ${clampedFrame}, duration: ${safeDuration}`);
+      return; // Skip this skill if frame is invalid
+    }
+
     // Render Remotion Player
     const root = ReactDOM.createRoot(container);
-    await new Promise<void>((resolve) => {
-      root.render(
-        React.createElement(Player, {
-          component: skillDef.component,
-          inputProps: enhancedProps,
-          durationInFrames,
-          fps: spec.canvas.fps,
-          compositionWidth: spec.canvas.width,
-          compositionHeight: spec.canvas.height,
-          initialFrame: clampedFrame,
-          controls: false,
-          autoPlay: false,
-          style: {
-            width: spec.canvas.width,
-            height: spec.canvas.height,
-          },
-        })
-      );
-      // Wait for render
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
+    await new Promise<void>((resolve, reject) => {
+      try {
+        root.render(
+          React.createElement(Player, {
+            component: skillDef.component,
+            inputProps: enhancedProps,
+            durationInFrames: safeDuration,
+            fps: spec.canvas.fps,
+            compositionWidth: spec.canvas.width,
+            compositionHeight: spec.canvas.height,
+            initialFrame: clampedFrame,
+            controls: false,
+            autoPlay: false,
+            style: {
+              width: spec.canvas.width,
+              height: spec.canvas.height,
+            },
+          })
+        );
+        // Wait for render
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      } catch (err) {
+        console.error('Error rendering Remotion Player:', err);
+        reject(err);
+      }
     });
 
     // Capture rendered content to canvas using html2canvas

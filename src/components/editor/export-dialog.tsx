@@ -80,16 +80,35 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       toast.info('Loading assets...');
       const loadedBlobUrls: Record<string, string> = { ...assetBlobUrls };
 
+      // Load all missing assets
       for (const asset of spec.assets) {
         if (!loadedBlobUrls[asset.id]) {
+          console.log(`Loading asset: ${asset.id} (${asset.filename})`);
           const result = await loadAsset(asset.id);
           if (result) {
-            loadedBlobUrls[asset.id] = URL.createObjectURL(result.blob);
+            const blobUrl = URL.createObjectURL(result.blob);
+            loadedBlobUrls[asset.id] = blobUrl;
+            console.log(`Asset loaded: ${asset.id} -> ${blobUrl}`);
           } else {
             toast.error(`Failed to load asset: ${asset.filename}`);
+            console.error(`Asset not found in IndexedDB: ${asset.id}`);
             return;
           }
         }
+      }
+
+      // Verify all required assets are loaded
+      const missingAssets: string[] = [];
+      for (const asset of spec.assets) {
+        if (!loadedBlobUrls[asset.id]) {
+          missingAssets.push(asset.filename);
+        }
+      }
+
+      if (missingAssets.length > 0) {
+        toast.error(`Missing assets: ${missingAssets.join(', ')}`);
+        console.error('Missing asset blob URLs:', missingAssets);
+        return;
       }
 
       // Update store with loaded blob URLs
@@ -99,6 +118,8 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
           setAssetBlobUrl(id, url);
         }
       }
+
+      console.log('All assets loaded successfully:', Object.keys(loadedBlobUrls));
 
       try {
       if (exportMethod === 'webm' && mediaRecorderSupported) {
