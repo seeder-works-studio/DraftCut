@@ -148,16 +148,18 @@ export async function getJamendoMusic(
     audiodownload: track.audiodownload,
   });
 
-  // Use the standard audio URL (more reliable than audiodownload)
-  // Jamendo audio URLs work better through proxy
-  let audioUrl = track.audio || track.audiodownload;
+  // Use audiodownload URL (simpler, no auth tokens in query params)
+  // The audio URL has session tokens that may not work through proxy
+  let audioUrl = track.audiodownload || track.audio;
 
   // Ensure URL doesn't have trailing slash (can cause issues)
   if (audioUrl.endsWith('/')) {
     audioUrl = audioUrl.slice(0, -1);
   }
 
-  console.log('[Jamendo] Using audio URL:', audioUrl);
+  console.log('[Jamendo] Download URL (audiodownload):', track.audiodownload);
+  console.log('[Jamendo] Streaming URL (audio):', track.audio);
+  console.log('[Jamendo] Using:', audioUrl);
   const blob = await downloadJamendoTrack(audioUrl);
 
   return { blob, metadata: track };

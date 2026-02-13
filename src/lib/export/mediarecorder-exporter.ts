@@ -619,47 +619,42 @@ async function renderRemotionSkillToCanvas(
   const skillDef = SKILL_REGISTRY[clip.skillType];
   if (!skillDef) return;
 
-  // Create hidden container for rendering
-  // CRITICAL: Override CSS variables to prevent OKLCH color inheritance from globals.css
-  const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '0';
+  console.log(`[MediaRecorder] Creating isolated iframe for ${clip.skillType}...`);
+
+  // Create isolated iframe to completely block CSS inheritance
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '0';
+  iframe.style.width = `${spec.canvas.width}px`;
+  iframe.style.height = `${spec.canvas.height}px`;
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  // Wait for iframe to be ready
+  await new Promise(resolve => {
+    if (iframe.contentDocument?.readyState === 'complete') {
+      resolve(null);
+    } else {
+      iframe.onload = () => resolve(null);
+    }
+  });
+
+  const iframeDoc = iframe.contentDocument!;
+  const iframeWindow = iframe.contentWindow!;
+
+  // Create container in iframe with zero CSS inheritance
+  const container = iframeDoc.createElement('div');
   container.style.width = `${spec.canvas.width}px`;
   container.style.height = `${spec.canvas.height}px`;
   container.style.overflow = 'hidden';
   container.style.backgroundColor = spec.canvas.backgroundColor || '#000000';
+  container.style.margin = '0';
+  container.style.padding = '0';
 
-  // Add inline style to override ALL CSS variables with hex colors
-  // This prevents html2canvas from encountering OKLCH colors
-  const styleOverride = document.createElement('style');
-  styleOverride.textContent = `
-    .remotion-export-container,
-    .remotion-export-container * {
-      --background: #ffffff !important;
-      --foreground: #000000 !important;
-      --card: #ffffff !important;
-      --card-foreground: #000000 !important;
-      --popover: #ffffff !important;
-      --popover-foreground: #000000 !important;
-      --primary: #000000 !important;
-      --primary-foreground: #ffffff !important;
-      --secondary: #f5f5f5 !important;
-      --secondary-foreground: #000000 !important;
-      --muted: #f5f5f5 !important;
-      --muted-foreground: #737373 !important;
-      --accent: #3b82f6 !important;
-      --accent-foreground: #000000 !important;
-      --destructive: #ef4444 !important;
-      --border: #e5e5e5 !important;
-      --input: #e5e5e5 !important;
-      --ring: #737373 !important;
-    }
-  `;
-  container.appendChild(styleOverride);
-  container.classList.add('remotion-export-container');
-
-  document.body.appendChild(container);
+  iframeDoc.body.style.margin = '0';
+  iframeDoc.body.style.padding = '0';
+  iframeDoc.body.appendChild(container);
 
   try {
     // Calculate frame relative to clip start
