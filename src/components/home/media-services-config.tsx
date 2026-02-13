@@ -44,7 +44,7 @@ export const MEDIA_SERVICES: MediaService[] = [
     id: 'fal',
     name: 'FAL.ai',
     letter: 'F',
-    description: 'Fast AI inference',
+    description: 'NanaBanana image generation',
     placeholder: 'fal_...',
     signupUrl: 'https://fal.ai/dashboard/keys',
   },

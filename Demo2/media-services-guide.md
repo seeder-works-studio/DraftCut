@@ -4,51 +4,73 @@ This guide shows how to add stock images, background music, sound effects, and v
 
 ---
 
-## 🖼️ Stock Images (Pexels)
+## 🖼️ Images for Videos
 
-### **Setup:**
+### **Option A: Stock Photos (Pexels)** - Real Photography
 
+**Setup:**
 1. Get free Pexels API key: https://www.pexels.com/api/
 2. Go to Settings → Media Services
 3. Add your Pexels API key
 
-### **Method 1: Via Chat Panel** (✅ Recommended - Safer)
+**Best for:** Real-world photography, professional shots, people, places, objects
 
-**After generating your initial video**, use chat to add stock images:
-
+**Via Chat Panel:**
 ```
 "Add 3 stock images of coffee shops"
 "Find stock photos of nature and add them to the slideshow"
-"Replace the current images with stock images of technology"
-"Add stock images of: sunset, beach, ocean waves"
+"Add Pexels photos about productivity"
 ```
 
-**Why this is safer:**
-- You see the video first
-- Add only what's needed
-- Iterate based on results
-- More control over selection
+### **Option B: AI-Generated Images (FAL.ai NanaBanana)** - Custom Scenes
 
-### **Method 2: During Initial Generation**
+**Setup:**
+1. Get FAL.ai API key: https://fal.ai/dashboard/keys
+2. Go to Settings → Media Services
+3. Add your FAL.ai API key
 
-Include in your prompt:
+**Best for:** Custom scenes, concepts, fantasy, specific compositions, branded content
+
+**Via Chat Panel:**
 ```
-"Create a promo video about coffee. Use stock images of coffee shops, baristas, and espresso machines."
+"Generate image of futuristic city at sunset"
+"Create AI image showing teamwork and collaboration"
+"Generate images of: abstract technology, data flow, cloud computing"
+"Make a custom image of coffee cup with steam forming heart shape"
 ```
 
-The system will:
-1. Search Pexels for relevant images
-2. Download top 5 matches per topic
-3. Add them to your assets
-4. Use them in the video
+**Why NanaBanana:**
+- Lightning fast (~1 second per image)
+- High quality, sharp details
+- Perfect for scenes that don't exist in stock photos
+- Consistent art style across images
+
+### **When to Use Which:**
+
+| Need | Use Pexels | Use NanaBanana |
+|------|------------|----------------|
+| Real people | ✅ | ❌ |
+| Actual locations | ✅ | ❌ |
+| Product photography | ✅ | ⚠️ |
+| Custom concepts | ❌ | ✅ |
+| Fantasy/sci-fi scenes | ❌ | ✅ |
+| Abstract visuals | ⚠️ | ✅ |
+| Branded content | ❌ | ✅ |
 
 ### **Example Chat Commands:**
 
+**Stock Photos (Pexels):**
 ```
 ✅ "Add stock images of workspace, laptop, coffee"
 ✅ "Find 5 stock photos of happy people"
-✅ "Replace image 1 with stock image of sunset"
-✅ "Add Pexels photos about productivity"
+✅ "Replace image 1 with stock photo of sunset"
+```
+
+**AI-Generated (NanaBanana):**
+```
+✅ "Generate image of rocket launching into space"
+✅ "Create AI image showing abstract data visualization"
+✅ "Generate custom image of tropical beach with palm trees at golden hour"
 ```
 
 ---
@@ -358,6 +380,7 @@ Configure all API keys in one place:
 ## 📚 API Key Links
 
 - **Pexels**: https://www.pexels.com/api/ (FREE - 200 requests/hour)
+- **FAL.ai**: https://fal.ai/dashboard/keys (Pay-per-use - ~$0.003/image)
 - **Beatoven AI**: https://www.beatoven.ai/ (Paid - best music quality)
 - **Replicate**: https://replicate.com/ (Pay-per-use)
 - **ElevenLabs**: https://elevenlabs.io/ (Free tier available)
@@ -370,6 +393,7 @@ Configure all API keys in one place:
 | Feature | Status | Via Chat | Auto |
 |---------|--------|----------|------|
 | Stock Images (Pexels) | ✅ Ready | ✅ | ⚠️ |
+| AI Images (FAL.ai NanaBanana) | ✅ Ready | ✅ | ⚠️ |
 | Background Music (Beatoven) | ✅ Working | ✅ | ✅ |
 | Background Music (Replicate) | ✅ Working | ✅ | ✅ |
 | Voiceover (ElevenLabs) | ⚠️ Partial | ⚠️ | ❌ |

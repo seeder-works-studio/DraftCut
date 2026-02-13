@@ -42,17 +42,17 @@ const CLAUDE_MODELS: ModelOption[] = [
 ];
 
 const PROVIDERS = {
-  gemini: {
-    label: 'Gemini (Google)',
-    defaultModel: 'gemini-2.5-flash',
-    models: GEMINI_MODELS,
-    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-  },
   claude: {
     label: 'Claude (Anthropic)',
     defaultModel: 'claude-sonnet-4-5-20250929',
     models: CLAUDE_MODELS,
     baseURL: undefined,
+  },
+  gemini: {
+    label: 'Gemini (Google)',
+    defaultModel: 'gemini-2.5-flash',
+    models: GEMINI_MODELS,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
   },
   openai: {
     label: 'OpenAI',

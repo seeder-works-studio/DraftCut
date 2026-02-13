@@ -37,12 +37,14 @@ interface ExportDialogProps {
 
 type ExportMethod = 'webm' | 'diffusion' | 'json';
 type ExportQuality = 'low' | 'medium' | 'high' | 'ultra';
+type ExportResolution = '0.5' | '1' | '1.5' | '2';
 
 export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [exportMethod, setExportMethod] = useState<ExportMethod>('webm');
   const [quality, setQuality] = useState<ExportQuality>('high');
+  const [resolution, setResolution] = useState<ExportResolution>('1');
   const [diffusionSupported, setDiffusionSupported] = useState(false);
   const [mediaRecorderSupported, setMediaRecorderSupported] = useState(false);
 
@@ -130,6 +132,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
           {
             quality: quality as 'low' | 'medium' | 'high' | 'ultra',
             format: 'mp4',
+            resolution: parseFloat(resolution),
             onProgress: (p) => setProgress(p * 100),
           }
         );
@@ -288,10 +291,42 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                   <SelectItem value="medium">Medium (5 Mbps)</SelectItem>
                   <SelectItem value="high">High (10 Mbps) ✓ Recommended</SelectItem>
                   {exportMethod === 'diffusion' && (
-                    <SelectItem value="ultra">Ultra (Slow, best quality)</SelectItem>
+                    <SelectItem value="ultra">Ultra (25 Mbps, best quality)</SelectItem>
                   )}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {/* Resolution/Scale Settings (only for Diffusion) */}
+          {exportMethod === 'diffusion' && spec && (
+            <div className="space-y-2">
+              <Label>Resolution Scale</Label>
+              <Select
+                value={resolution}
+                onValueChange={(v) => setResolution(v as ExportResolution)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0.5">
+                    0.5x (Half - {Math.round(spec.canvas.width * 0.5)}x{Math.round(spec.canvas.height * 0.5)})
+                  </SelectItem>
+                  <SelectItem value="1">
+                    1x (Native - {spec.canvas.width}x{spec.canvas.height}) ✓ Recommended
+                  </SelectItem>
+                  <SelectItem value="1.5">
+                    1.5x ({Math.round(spec.canvas.width * 1.5)}x{Math.round(spec.canvas.height * 1.5)})
+                  </SelectItem>
+                  <SelectItem value="2">
+                    2x (4K - {spec.canvas.width * 2}x{spec.canvas.height * 2})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Higher resolution = larger file size and slower export
+              </p>
             </div>
           )}
 
