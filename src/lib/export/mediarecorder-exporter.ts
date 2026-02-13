@@ -8,6 +8,8 @@ import type { ProjectSpec, Clip } from '@/lib/spec/types';
 import { SKILL_REGISTRY } from '@/skills/registry';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
+import { Player } from '@remotion/player';
+import html2canvas from 'html2canvas';
 
 export interface MediaRecorderExportOptions {
   quality?: 'low' | 'medium' | 'high';
@@ -389,21 +391,89 @@ async function renderSkillClip(
     return;
   }
 
-  // For other skills, create a temporary DOM element to render React component
-  // This is a simplified approach - full implementation would use proper React rendering
-  // For now, we'll render a placeholder
-  ctx.save();
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.fillRect(0, 0, spec.canvas.width, spec.canvas.height);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '24px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(
-    `${clip.skillType} skill`,
-    spec.canvas.width / 2,
-    spec.canvas.height / 2
-  );
-  ctx.restore();
+  // For other skills, render using Remotion Player + html2canvas
+  await renderRemotionSkillToCanvas(ctx, clip, frame, spec, assetBlobUrls);
+}
+
+/**
+ * Render any Remotion skill to canvas using Player + html2canvas
+ */
+async function renderRemotionSkillToCanvas(
+  ctx: CanvasRenderingContext2D,
+  clip: Clip,
+  frame: number,
+  spec: ProjectSpec,
+  assetBlobUrls: Record<string, string>
+): Promise<void> {
+  if (!clip.skillType) return;
+
+  const skillDef = SKILL_REGISTRY[clip.skillType];
+  if (!skillDef) return;
+
+  // Create hidden container for rendering
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = `${spec.canvas.width}px`;
+  container.style.height = `${spec.canvas.height}px`;
+  container.style.overflow = 'hidden';
+  container.style.backgroundColor = spec.canvas.backgroundColor || '#000000';
+  document.body.appendChild(container);
+
+  try {
+    // Calculate frame relative to clip start
+    const durationInFrames = Math.ceil(clip.duration * spec.canvas.fps);
+
+    // Inject assetBlobUrls into skill props
+    const enhancedProps = {
+      ...(clip.skillProps || skillDef.defaultProps),
+      assetBlobUrls,
+    };
+
+    // Render Remotion Player
+    const root = ReactDOM.createRoot(container);
+    await new Promise<void>((resolve) => {
+      root.render(
+        React.createElement(Player, {
+          component: skillDef.component,
+          inputProps: enhancedProps,
+          durationInFrames,
+          fps: spec.canvas.fps,
+          compositionWidth: spec.canvas.width,
+          compositionHeight: spec.canvas.height,
+          initialFrame: frame,
+          controls: false,
+          autoPlay: false,
+          style: {
+            width: spec.canvas.width,
+            height: spec.canvas.height,
+          },
+        })
+      );
+      // Wait for render
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+
+    // Capture rendered content to canvas using html2canvas
+    const capturedCanvas = await html2canvas(container, {
+      width: spec.canvas.width,
+      height: spec.canvas.height,
+      backgroundColor: null,
+      logging: false,
+      scale: 1,
+    });
+
+    // Draw captured canvas onto export canvas
+    ctx.drawImage(capturedCanvas, 0, 0);
+
+    // Cleanup
+    root.unmount();
+  } finally {
+    document.body.removeChild(container);
+  }
 }
 
 /**
