@@ -38,6 +38,8 @@ const ClipSchema = z.object({
     'CalloutBoxArrow',
     'IntroTitleCard',
     'OutroCTA',
+    'ImageSlideshow',
+    'TextReveal',
   ]).optional(),
   skillProps: z.record(z.string(), z.unknown()).optional(),
   transform: TransformSchema.optional(),
