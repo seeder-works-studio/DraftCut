@@ -118,15 +118,60 @@ function sanitizeObjectColors(obj: any): any {
 }
 
 /**
+ * Find all LAB colors in an object (for debugging)
+ */
+function findLabColors(obj: any, path: string = 'root'): string[] {
+  const found: string[] = [];
+
+  if (typeof obj === 'string') {
+    if (obj.startsWith('lab(') || obj.startsWith('lch(') ||
+        obj.startsWith('oklab(') || obj.startsWith('oklch(')) {
+      found.push(`${path}: "${obj}"`);
+    }
+    return found;
+  }
+
+  if (Array.isArray(obj)) {
+    obj.forEach((item, idx) => {
+      found.push(...findLabColors(item, `${path}[${idx}]`));
+    });
+    return found;
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    for (const [key, value] of Object.entries(obj)) {
+      found.push(...findLabColors(value, `${path}.${key}`));
+    }
+  }
+
+  return found;
+}
+
+/**
  * Sanitize all colors in the spec to hex format
  */
 function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
-  console.log('Sanitizing spec colors...');
+  console.log('[MediaRecorder] Sanitizing spec colors...');
+
+  // Check for LAB colors before sanitization
+  const labColorsBefore = findLabColors(spec);
+  if (labColorsBefore.length > 0) {
+    console.warn('[MediaRecorder] Found LAB colors BEFORE sanitization:', labColorsBefore);
+  }
 
   // Deep clone and sanitize recursively
   const sanitized = sanitizeObjectColors(JSON.parse(JSON.stringify(spec))) as ProjectSpec;
 
-  console.log('Color sanitization complete');
+  // Verify no LAB colors remain after sanitization
+  const labColorsAfter = findLabColors(sanitized);
+  if (labColorsAfter.length > 0) {
+    console.error('[MediaRecorder] ❌ LAB colors still present AFTER sanitization:', labColorsAfter);
+    console.error('[MediaRecorder] Sanitized spec:', JSON.stringify(sanitized, null, 2));
+    throw new Error(`LAB colors found in spec after sanitization: ${labColorsAfter.join(', ')}`);
+  } else {
+    console.log('[MediaRecorder] ✓ Color sanitization complete - no LAB colors found');
+  }
+
   return sanitized;
 }
 
