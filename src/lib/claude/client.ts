@@ -294,6 +294,44 @@ export async function generateVideoSpec(
       clipCount: validatedSpec.composition?.tracks?.reduce((sum, t) => sum + (t.clips?.length || 0), 0) || 0,
     });
 
+    // Post-generation validation and auto-fix
+    const availableAssetIds = new Set(assets.map((a) => a.id));
+    logger.info('VideoGeneration', 'Running post-generation validation', {
+      availableAssets: Array.from(availableAssetIds),
+    });
+    onProgress?.('🔍 Validating generated video...');
+
+    const validationResult = validateAndFixSpec(validatedSpec, availableAssetIds);
+    const validationReport = formatValidationReport(validationResult);
+
+    if (validationResult.issues.length > 0) {
+      logger.warn('VideoGeneration', 'Validation issues found', {
+        issueCount: validationResult.issues.length,
+        issues: validationResult.issues,
+        autoFixed: validationResult.autoFixed,
+      });
+
+      // Show validation report to user
+      console.log('\n📋 Validation Report:\n' + validationReport + '\n');
+
+      if (validationResult.autoFixed && validationResult.fixedSpec) {
+        onProgress?.('🔧 Auto-fixed validation issues');
+        // Use the fixed spec
+        validatedSpec = validationResult.fixedSpec;
+        logger.info('VideoGeneration', 'Using auto-fixed spec');
+      } else if (!validationResult.valid) {
+        logger.error('VideoGeneration', 'Critical validation errors - cannot auto-fix');
+        throw new Error(
+          'Generated video has critical errors that cannot be auto-fixed:\n\n' +
+            validationReport +
+            '\n\nPlease try regenerating or upload required assets.'
+        );
+      }
+    } else {
+      logger.info('VideoGeneration', 'No validation issues - spec is clean');
+      onProgress?.('✅ Validation passed');
+    }
+
     // Agentic refinement (if enabled)
     if (agenticMode?.enabled && config.provider === 'claude') {
       logger.info('VideoGeneration', 'Starting agentic video refinement', {
@@ -321,6 +359,19 @@ export async function generateVideoSpec(
         });
 
         logger.info('VideoGeneration', 'Agentic refinement completed');
+
+        // Validate refined spec too
+        onProgress?.('🔍 Validating refined video...');
+        const refinedValidation = validateAndFixSpec(
+          validateProjectSpec(refinedSpec),
+          availableAssetIds
+        );
+
+        if (refinedValidation.autoFixed && refinedValidation.fixedSpec) {
+          logger.info('VideoGeneration', 'Auto-fixed refined spec');
+          return refinedValidation.fixedSpec;
+        }
+
         return validateProjectSpec(refinedSpec);
       } catch (error) {
         logger.error('VideoGeneration', 'Error during agentic refinement', error);
