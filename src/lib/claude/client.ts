@@ -143,12 +143,25 @@ export async function generateVideoSpec(
       logger.debug('VideoGeneration', 'Removed markdown code blocks');
     }
 
-    let spec = JSON.parse(jsonText);
-    logger.debug('VideoGeneration', 'JSON parsed successfully', {
-      hasCanvas: !!spec.canvas,
-      hasComposition: !!spec.composition,
-      assetCount: spec.assets?.length || 0,
-    });
+    let spec;
+    try {
+      spec = JSON.parse(jsonText);
+      logger.debug('VideoGeneration', 'JSON parsed successfully', {
+        hasCanvas: !!spec.canvas,
+        hasComposition: !!spec.composition,
+        assetCount: spec.assets?.length || 0,
+      });
+    } catch (parseError) {
+      logger.error('VideoGeneration', 'JSON parse error', {
+        error: parseError instanceof Error ? parseError.message : String(parseError),
+        jsonLength: jsonText.length,
+        jsonPreview: jsonText.substring(0, 500),
+        jsonAtError: jsonText.substring(4600, 4700), // Show area around error position
+      });
+      throw new Error(
+        `Invalid JSON from AI: ${parseError instanceof Error ? parseError.message : String(parseError)}\n\nCheck console logs for details.`
+      );
+    }
 
     // Sanitize: strip any invalid assets that Claude hallucinated
     const originalAssetCount = spec.assets?.length || 0;
