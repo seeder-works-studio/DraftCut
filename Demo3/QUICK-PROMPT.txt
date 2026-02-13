@@ -1,0 +1,38 @@
+Create a 35-second promotional video for DraftCut (AI-powered video editor) using 16:9 aspect ratio at 1920x1080, 30fps.
+
+STRUCTURE:
+
+Intro (0-5s): IntroTitleCard
+- Title: "DraftCut"
+- Subtitle: "AI-Powered Video Editor in Your Browser"
+- Background: #1a1a2e
+- Accent: #8B5CF6
+
+Problem (5-10s): TextReveal
+- Text: "Video editing shouldn't require complex software"
+- Style: fadeIn
+- White text on dark background
+
+Demo (10-20s): ImageSlideshow
+- Use homescreen.png asset
+- Ken Burns: zoomIn
+- Caption: "Just describe your vision, AI does the rest"
+
+Features (20-25s): KineticTypography
+- Lines: "✨ Browser-based editing", "🤖 AI-powered generation", "🎬 Professional results"
+- Animation: bounce, timing: word, stagger: 15
+
+Recognition (25-32s):
+- 25-28s: TextReveal "Built with Claude Opus 4.6" (slideUp style)
+- 28-30s: BrandLogo with claude.png (pulse animation, scale: 1.5)
+- 30-32s: BrandLogo with cerebralvalley.jpg (fade animation, scale: 1.2)
+
+CTA (32-35s): OutroCTA
+- Heading: "Start Creating Today"
+- CTA: "Try DraftCut Free"
+- Background: #1a1a2e
+- Button: #3b82f6
+
+Add upbeat corporate background music (energetic, inspiring, 35 seconds).
+
+Brand colors: Purple #8B5CF6, Blue #3b82f6, Dark Navy #1a1a2e, White #ffffff
