@@ -92,11 +92,12 @@ export function ChatPanel() {
     })();
   }, [configLoaded, setAiConfig]);
 
-  // Seed welcome message
+  // Seed welcome message (only once)
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && !messages.some(m => m.id === 'welcome')) {
       addMessage(WELCOME_MESSAGE);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-scroll to bottom
