@@ -1,7 +1,25 @@
 import * as cheerio from 'cheerio';
 
+// CORS headers required for Diffusion Studios (SharedArrayBuffer support)
+const CORS_HEADERS = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'credentialless',
+};
+
+function addCORSHeaders(response: Response): Response {
+  const newHeaders = new Headers(response.headers);
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+    newHeaders.set(key, value);
+  });
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: any, ctx: any): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/scrape') {
@@ -9,6 +27,12 @@ export default {
     }
     if (url.pathname === '/api/proxy-image') {
       return handleProxyImage(url);
+    }
+
+    // For static assets, add CORS headers via env.ASSETS
+    if (env.ASSETS) {
+      const response = await env.ASSETS.fetch(request);
+      return addCORSHeaders(response);
     }
 
     // Fall through to static assets (handled by Wrangler assets binding)

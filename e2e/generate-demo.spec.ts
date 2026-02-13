@@ -19,16 +19,43 @@ const demoImages = fs
   .sort()
   .map((f) => path.join(DEMO_DIR, f));
 
-const PROMPT = `Create a 30-second demo video for "DraftCut" — an AI video editor built at the "Built with Opus 4.6: Claude Code Hackathon" by Cerebral Valley x Anthropic.
+const PROMPT = `Create a dynamic 30-second demo video for "DraftCut" — an AI video editor built at the "Built with Opus 4.6: Claude Code Hackathon" by Cerebral Valley x Anthropic.
 
-Use all uploaded screenshots as a slideshow. Structure:
+IMPORTANT: Use ImageSlideshow skill with Ken Burns effects for all screenshots - NO static images!
 
-1. INTRO (0-3s): Bold title card — "DraftCut" with subtitle "AI Video Editor — Built with Claude Code"
-2. HACKATHON CONTEXT (3-12s): Show the Discord announcement, Opus 4.6 intro, and speaker screenshots with captions like "500 builders. $100K in prizes. One week to ship."
-3. THE TOOL (12-22s): Show the hackathon landing page and registration screenshots with captions: "Describe a video. Upload assets. AI drafts the edit." then "Runs in your browser. 100% private."
-4. OUTRO (22-30s): Call to action — "Try DraftCut" with subtitle "Built with Opus 4.6 + Claude Code"
+Structure with MOTION GRAPHICS:
 
-Dark background (#0a0a0a). Brand colors: warm gold #D4A574, Anthropic purple #8B5CF6. Bold modern captions. Energetic pacing.`;
+1. INTRO (0-3s): IntroTitleCard with animated entrance
+   - Title: "DraftCut"
+   - Subtitle: "AI Video Editor — Built with Claude Code"
+   - Use animated accent bars and corner decorations
+
+2. HACKATHON CONTEXT (3-15s): ImageSlideshow with Ken Burns effects
+   - Slide 1: Discord announcement (kenBurns: "zoomIn", caption: "500 Builders • $100K in Prizes")
+   - Slide 2: Opus 4.6 intro (kenBurns: "panRight", caption: "Built with Opus 4.6")
+   - Slide 3: Speaker screenshots (kenBurns: "zoomOut", caption: "One Week to Ship")
+   - Use smooth crossfade transitions (20 frames)
+
+3. THE TOOL (15-25s): ImageSlideshow with dynamic motion
+   - Slide 1: Landing page (kenBurns: "zoomIn", caption: "Describe Your Video")
+   - Slide 2: Upload interface (kenBurns: "panLeft", caption: "Upload Your Assets")
+   - Slide 3: Editor view (kenBurns: "zoomOut", caption: "AI Drafts the Edit")
+   - Slide 4: Preview (kenBurns: "panRight", caption: "100% Browser-Based & Private")
+
+4. OUTRO (25-30s): OutroCTA with pulsing button
+   - Heading: "Try DraftCut Today"
+   - CTA Text: "Get Started Free"
+   - Include animated glow and shimmer effects
+
+STYLING:
+- Background: #0a0a0a (dark)
+- Primary: #D4A574 (warm gold)
+- Accent: #8B5CF6 (Anthropic purple)
+- Text: #ffffff (white)
+- Use bold, modern typography
+- Energetic pacing with constant motion
+
+REMEMBER: All images must use ImageSlideshow skill with Ken Burns effects - vary the effects (zoomIn, zoomOut, panLeft, panRight) for visual interest!`;
 
 test('Generate hackathon demo video end-to-end', async ({ page }) => {
   // Step 1: Go to home page
@@ -104,8 +131,6 @@ test('Generate hackathon demo video end-to-end', async ({ page }) => {
   await fileInput.setInputFiles(demoImages);
 
   // Wait for all assets to appear
-  await expect(page.locator('text=Assets')).toBeVisible({ timeout: 15_000 });
-  // Verify we have the right count
   await expect(page.locator(`text=Assets (${demoImages.length})`)).toBeVisible({
     timeout: 15_000,
   });
@@ -129,8 +154,8 @@ test('Generate hackathon demo video end-to-end', async ({ page }) => {
   });
   console.log('✓ Generation in progress...');
 
-  // Wait for navigation to /editor (up to 60s for Claude API call)
-  await page.waitForURL('**/editor', { timeout: 60_000 });
+  // Wait for navigation to /editor (up to 120s for Claude API call with longer prompt)
+  await page.waitForURL('**/editor', { timeout: 120_000 });
   console.log('✓ Navigated to editor!');
 
   // Step 8: Verify editor loaded with content

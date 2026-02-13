@@ -1,0 +1,44 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - heading "DraftCut" [level=1] [ref=e5]
+        - paragraph [ref=e6]: AI Video Editor - Local & Private
+    - main [ref=e7]:
+      - generic [ref=e8]:
+        - heading "Create Videos with AI" [level=2] [ref=e9]
+        - paragraph [ref=e10]: Describe your video, upload assets, and let AI generate a complete video draft. Everything runs in your browser.
+      - generic [ref=e11]:
+        - textbox "e.g. Create a 20s promo for gruns.com with intro, captions, and CTA..." [ref=e12]: Create a 10-second video with these images using Ken Burns effects.
+        - generic [ref=e13]:
+          - button "Settings" [ref=e14]:
+            - img
+          - button "Generate Video Draft" [ref=e15]
+      - generic [ref=e17]:
+        - generic [ref=e18]: +
+        - paragraph [ref=e19]: Drag & drop video, image, or audio files here
+        - button "Browse Files" [ref=e20]
+      - generic [ref=e21]:
+        - heading "Assets (2)" [level=3] [ref=e22]
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: I
+            - generic [ref=e26]:
+              - paragraph [ref=e27]: Screenshot 2026-02-12 at 12.37.56 PM.png
+              - paragraph [ref=e28]: image | 2818x1724
+            - button "x" [ref=e29]
+          - generic [ref=e30]:
+            - generic [ref=e31]: I
+            - generic [ref=e32]:
+              - paragraph [ref=e33]: Screenshot 2026-02-12 at 12.39.07 PM.png
+              - paragraph [ref=e34]: image | 1730x984
+            - button "x" [ref=e35]
+      - button "Load Example Project" [ref=e37]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e43] [cursor=pointer]:
+    - img [ref=e44]
+  - alert [ref=e47]
+```

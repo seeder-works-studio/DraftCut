@@ -17,6 +17,14 @@ interface MediaService {
 
 export const MEDIA_SERVICES: MediaService[] = [
   {
+    id: 'gemini-video',
+    name: 'Gemini Video',
+    letter: 'G',
+    description: 'AI video content analysis',
+    placeholder: 'AIza...',
+    signupUrl: 'https://aistudio.google.com/app/apikey',
+  },
+  {
     id: 'elevenlabs',
     name: 'ElevenLabs',
     letter: 'E',

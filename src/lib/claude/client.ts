@@ -4,13 +4,27 @@ import { buildSystemPrompt } from './prompt';
 import type { WebsiteContext } from './prompt';
 import type { Asset, BrandKit, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
+import { createAgentSession } from '@/lib/agent/video-agent';
+import type { AgenticModeConfig } from '@/components/home/settings-dialog';
+
+/**
+ * Create Anthropic client for use in agent or other tools
+ */
+export function anthropic(apiKey: string): Anthropic {
+  return new Anthropic({
+    apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+}
 
 export async function generateVideoSpec(
   userPrompt: string,
   assets: Asset[],
   brandKit: BrandKit | undefined,
   config: AIProviderConfig,
-  websiteContext?: WebsiteContext
+  websiteContext?: WebsiteContext,
+  agenticMode?: AgenticModeConfig,
+  onProgress?: (message: string) => void
 ): Promise<ProjectSpec> {
   const systemPrompt = buildSystemPrompt(assets, brandKit, websiteContext);
 
@@ -75,7 +89,7 @@ export async function generateVideoSpec(
     jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
   }
 
-  const spec = JSON.parse(jsonText);
+  let spec = JSON.parse(jsonText);
 
   // Sanitize: strip any invalid assets that Claude hallucinated
   if (Array.isArray(spec.assets)) {
@@ -91,5 +105,26 @@ export async function generateVideoSpec(
     spec.assets = [];
   }
 
-  return validateProjectSpec(spec);
+  const validatedSpec = validateProjectSpec(spec);
+
+  // Agentic refinement (if enabled)
+  if (agenticMode?.enabled && config.provider === 'claude') {
+    onProgress?.('🤖 Starting agentic video refinement...');
+
+    const refinedSpec = await createAgentSession(validatedSpec, assets, {
+      targetScore: agenticMode.targetScore,
+      maxIterations: agenticMode.maxIterations,
+      apiKey: config.apiKey,
+      model: config.model,
+      onProgress: (update) => {
+        onProgress?.(
+          `🤖 Iteration ${update.iteration}/${agenticMode.maxIterations}: ${update.message} (Score: ${update.score}/100)`
+        );
+      },
+    });
+
+    return validateProjectSpec(refinedSpec);
+  }
+
+  return validatedSpec;
 }

@@ -73,7 +73,9 @@ export type SkillType =
   | 'CaptionsPop'
   | 'CalloutBoxArrow'
   | 'IntroTitleCard'
-  | 'OutroCTA';
+  | 'OutroCTA'
+  | 'ImageSlideshow'
+  | 'TextReveal';
 
 export interface BrandKit {
   logoAssetId?: string;

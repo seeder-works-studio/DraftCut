@@ -5,6 +5,8 @@ import { CaptionsPop, type CaptionsPopProps } from './CaptionsPop';
 import { CalloutBoxArrow, type CalloutBoxArrowProps } from './CalloutBoxArrow';
 import { IntroTitleCard, type IntroTitleCardProps } from './IntroTitleCard';
 import { OutroCTA, type OutroCTAProps } from './OutroCTA';
+import { ImageSlideshow, type ImageSlideshowProps } from './ImageSlideshow';
+import { TextReveal, type TextRevealProps } from './TextReveal';
 
 export interface SkillDefinition {
   id: SkillType;
@@ -62,6 +64,7 @@ const IntroTitleCardPropsSchema = z.object({
   backgroundColor: z.string().default('#1a1a2e'),
   titleColor: z.string().default('#ffffff'),
   subtitleColor: z.string().default('#a0a0a0'),
+  accentColor: z.string().optional().default('#8B5CF6'),
 });
 
 const OutroCTAPropsSchema = z.object({
@@ -73,6 +76,32 @@ const OutroCTAPropsSchema = z.object({
   textColor: z.string().default('#ffffff'),
   buttonColor: z.string().default('#3b82f6'),
   buttonTextColor: z.string().default('#ffffff'),
+});
+
+const ImageSlideshowPropsSchema = z.object({
+  slides: z.array(
+    z.object({
+      assetId: z.string(),
+      duration: z.number().default(5),
+      kenBurns: z.enum(['zoomIn', 'zoomOut', 'panRight', 'panLeft', 'none']).optional().default('zoomIn'),
+      caption: z.string().optional(),
+    })
+  ).default([]),
+  transitionDuration: z.number().optional().default(20),
+  backgroundColor: z.string().optional().default('#000000'),
+  captionColor: z.string().optional().default('#ffffff'),
+  captionBackgroundColor: z.string().optional().default('rgba(0, 0, 0, 0.5)'),
+});
+
+const TextRevealPropsSchema = z.object({
+  text: z.string().default('Hello World'),
+  style: z.enum(['typewriter', 'fadeIn', 'slideUp', 'wordPop', 'glitch']).default('fadeIn'),
+  fontSize: z.number().optional().default(64),
+  fontFamily: z.string().optional().default('Inter, sans-serif'),
+  color: z.string().optional().default('#ffffff'),
+  backgroundColor: z.string().optional().default('transparent'),
+  align: z.enum(['left', 'center', 'right']).optional().default('center'),
+  verticalAlign: z.enum(['top', 'center', 'bottom']).optional().default('center'),
 });
 
 export const SKILL_REGISTRY: Record<SkillType, SkillDefinition> = {
@@ -115,6 +144,22 @@ export const SKILL_REGISTRY: Record<SkillType, SkillDefinition> = {
     defaultDuration: 5,
     defaultProps: OutroCTAPropsSchema.parse({}),
     propsSchema: OutroCTAPropsSchema,
+  },
+  ImageSlideshow: {
+    id: 'ImageSlideshow',
+    name: 'Image Slideshow',
+    component: ImageSlideshow,
+    defaultDuration: 15,
+    defaultProps: ImageSlideshowPropsSchema.parse({}),
+    propsSchema: ImageSlideshowPropsSchema,
+  },
+  TextReveal: {
+    id: 'TextReveal',
+    name: 'Text Reveal',
+    component: TextReveal,
+    defaultDuration: 5,
+    defaultProps: TextRevealPropsSchema.parse({}),
+    propsSchema: TextRevealPropsSchema,
   },
 };
 

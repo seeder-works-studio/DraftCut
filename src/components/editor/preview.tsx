@@ -113,6 +113,7 @@ export function Preview() {
             height={spec.canvas.height}
             scale={scale}
             fps={spec.canvas.fps}
+            assetBlobUrls={assetBlobUrls}
           />
         ))}
 
@@ -249,6 +250,7 @@ function SkillOverlay({
   height,
   scale,
   fps,
+  assetBlobUrls,
 }: {
   clip: Clip;
   currentTime: number;
@@ -256,12 +258,19 @@ function SkillOverlay({
   height: number;
   scale: number;
   fps: number;
+  assetBlobUrls: Record<string, string>;
 }) {
   const skillDef = SKILL_REGISTRY[clip.skillType!];
   if (!skillDef) return null;
 
   const relativeFrame = Math.floor((currentTime - clip.startTime) * fps);
   const durationInFrames = Math.ceil(clip.duration * fps);
+
+  // Inject assetBlobUrls into skill props
+  const enhancedProps = {
+    ...(clip.skillProps || skillDef.defaultProps),
+    assetBlobUrls,
+  };
 
   return (
     <div
@@ -274,7 +283,7 @@ function SkillOverlay({
     >
       <Player
         component={skillDef.component}
-        inputProps={clip.skillProps || skillDef.defaultProps}
+        inputProps={enhancedProps}
         durationInFrames={durationInFrames}
         fps={fps}
         compositionWidth={width}

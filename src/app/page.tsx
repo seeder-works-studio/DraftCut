@@ -6,6 +6,7 @@ import { PromptInput } from '@/components/home/prompt-input';
 import { AssetUploader, AssetList } from '@/components/home/asset-uploader';
 import { SettingsDialog } from '@/components/home/settings-dialog';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
+import type { AgenticModeConfig } from '@/components/home/settings-dialog';
 import { Button } from '@/components/ui/button';
 import { useProjectStore } from '@/stores/project-store';
 import { generateVideoSpec } from '@/lib/claude/client';
@@ -48,6 +49,12 @@ export default function HomePage() {
   const [statusMessage, setStatusMessage] = useState<string>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState('');
+
+  const [agenticMode, setAgenticMode] = useState<AgenticModeConfig>({
+    enabled: false,
+    targetScore: 85,
+    maxIterations: 5,
+  });
 
   const handleGenerate = async (prompt: string) => {
     if (!aiConfig.apiKey) {
@@ -136,7 +143,9 @@ export default function HomePage() {
         allAssets,
         currentBrandKit,
         aiConfig,
-        websiteContext
+        websiteContext,
+        agenticMode,
+        setStatusMessage
       );
       setSpec(spec);
       saveSetting('ai-provider', aiConfig.provider);
@@ -204,6 +213,8 @@ export default function HomePage() {
         onBrandKitChange={setBrandKit}
         websiteUrl={websiteUrl}
         onWebsiteUrlChange={setWebsiteUrl}
+        agenticMode={agenticMode}
+        onAgenticModeChange={setAgenticMode}
       />
     </div>
   );
