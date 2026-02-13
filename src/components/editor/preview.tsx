@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useEffect } from 'react';
-import { Player } from '@remotion/player';
+import { useMemo, useRef, useEffect, useState } from 'react';
+import { Player, type PlayerRef } from '@remotion/player';
 import { SKILL_REGISTRY } from '@/skills/registry';
 import { useEditorStore } from '@/stores/editor-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -261,6 +261,8 @@ function SkillOverlay({
   assetBlobUrls: Record<string, string>;
 }) {
   const skillDef = SKILL_REGISTRY[clip.skillType!];
+  const playerRef = useRef<PlayerRef>(null);
+
   if (!skillDef) return null;
 
   const relativeFrame = Math.floor((currentTime - clip.startTime) * fps);
@@ -272,6 +274,13 @@ function SkillOverlay({
     assetBlobUrls,
   };
 
+  // Sync player to current frame
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.seekTo(relativeFrame);
+    }
+  }, [relativeFrame]);
+
   return (
     <div
       className="absolute inset-0"
@@ -282,6 +291,7 @@ function SkillOverlay({
       }}
     >
       <Player
+        ref={playerRef}
         component={skillDef.component}
         inputProps={enhancedProps}
         durationInFrames={durationInFrames}
@@ -293,7 +303,6 @@ function SkillOverlay({
           height: height * scale,
         }}
         renderLoading={() => null}
-        initialFrame={relativeFrame}
         controls={false}
         autoPlay={false}
       />
