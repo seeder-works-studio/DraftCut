@@ -64,8 +64,23 @@ export function Preview() {
         }
       }
 
+      // Log active clips with asset references
+      if (activeVideoClip?.assetId && !assetBlobUrls[activeVideoClip.assetId]) {
+        console.error('⚠️ [Preview] Video clip references missing asset:', activeVideoClip.assetId);
+      }
+      activeImageClips.forEach(clip => {
+        if (clip.assetId && !assetBlobUrls[clip.assetId]) {
+          console.error('⚠️ [Preview] Image clip references missing asset:', clip.assetId);
+        }
+      });
+      activeAudioClips.forEach(clip => {
+        if (clip.assetId && !assetBlobUrls[clip.assetId]) {
+          console.error('⚠️ [Preview] Audio clip references missing asset:', clip.assetId);
+        }
+      });
+
       return { activeVideoClip, activeImageClips, activeSkills, activeAudioClips };
-    }, [spec, currentTime]);
+    }, [spec, currentTime, assetBlobUrls]);
 
   if (!spec) {
     return (
