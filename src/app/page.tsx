@@ -24,9 +24,18 @@ function extractUrl(text: string): string | null {
   // Match full URLs first
   const fullUrl = text.match(/https?:\/\/[^\s]+/i);
   if (fullUrl) return fullUrl[0];
+
   // Match bare domains (e.g. "gruns.com", "example.co.uk/page")
+  // But exclude common file extensions
   const bareDomain = text.match(/(?:^|\s)((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?)/);
-  if (bareDomain) return `https://${bareDomain[1]}`;
+  if (bareDomain) {
+    const domain = bareDomain[1];
+    // Skip if it looks like a filename (ends with common image/video/audio extensions)
+    if (/\.(png|jpg|jpeg|gif|webp|svg|mp4|webm|mov|mp3|wav|m4a)$/i.test(domain)) {
+      return null;
+    }
+    return `https://${domain}`;
+  }
   return null;
 }
 
