@@ -88,15 +88,32 @@ export async function searchJamendoMusic(
 export async function downloadJamendoTrack(audioUrl: string): Promise<Blob> {
   console.log('[Jamendo] Downloading track from:', audioUrl);
 
-  // Use proxy to avoid CORS issues
+  // Try direct download first (Jamendo supports CORS)
+  try {
+    console.log('[Jamendo] Attempting direct download...');
+    const response = await fetch(audioUrl);
+
+    if (response.ok) {
+      console.log('[Jamendo] Direct download successful');
+      return await response.blob();
+    }
+
+    console.warn('[Jamendo] Direct download failed:', response.status);
+  } catch (directError) {
+    console.warn('[Jamendo] Direct download error:', directError);
+  }
+
+  // Fallback to proxy
+  console.log('[Jamendo] Trying proxy download...');
   const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(audioUrl)}`;
 
   const response = await fetch(proxyUrl);
 
   if (!response.ok) {
-    throw new Error(`Failed to download Jamendo track: ${response.status}`);
+    throw new Error(`Failed to download Jamendo track via proxy: ${response.status}`);
   }
 
+  console.log('[Jamendo] Proxy download successful');
   return await response.blob();
 }
 
