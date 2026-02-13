@@ -274,7 +274,7 @@ export async function generateVideoSpec(
     spec = sanitizeColors(spec);
 
     logger.info('VideoGeneration', 'Validating project spec');
-    const validatedSpec = validateProjectSpec(spec);
+    let validatedSpec = validateProjectSpec(spec);
 
     // Log detailed clip information for debugging
     const allClips = validatedSpec.composition?.tracks?.flatMap(t => t.clips || []) || [];
