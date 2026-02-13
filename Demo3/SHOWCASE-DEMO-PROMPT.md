@@ -1,291 +1,204 @@
-# Claude Hackathon Showcase Demo - DraftCut
+# 🎬 DraftCut - Claude Code Hackathon Showcase
 
-**Goal:** Create a stunning 60-90 second showcase video demonstrating DraftCut's AI-powered video editing capabilities.
+**"Pushing the boundaries of AI-powered video creation with Opus 4.6"**
 
----
-
-## 📁 Assets to Upload:
-
-1. **Videos** (will be auto-analyzed):
-   - `[hackathon_kickoff]_built_with_opus_4.6__a_claude_code_hackathon (720p).mp4`
-   - `[live_session]_ama_with_cat_wu (720p).mp4`
-
-2. **Images**:
-   - `homescreen.png` - DraftCut interface screenshot
-   - `cerebralvalley.jpg` - Cerebral Valley logo
-   - `claude.png` - Claude AI logo
+This is our submission for the Claude Code Hackathon — celebrating one year of building with Claude by exploring what's newly possible with Opus 4.6.
 
 ---
 
-## 🎬 Video Generation Prompt (Copy This):
+## 🚀 What Makes DraftCut Special
+
+**The Innovation:** DraftCut transforms video editing from a manual, hours-long process into a conversational, AI-powered workflow. Just describe what you want, and Opus 4.6 generates a complete, editable video — no timeline scrubbing, no manual cuts.
+
+**Why It Pushes Boundaries:**
+- **Agentic Video Analysis**: AI watches long videos, finds the best moments automatically
+- **Workflow Revolution**: Text prompt → AI generation → iterative refinement via chat
+- **Multi-Modal Mastery**: Combines video analysis, motion graphics, audio, and structured JSON generation
+- **Browser-Native**: Everything runs locally — showcasing web-first AI development
+
+---
+
+## 📁 Assets to Upload
+
+### Videos (auto-analyzed by Gemini):
+1. `[hackathon_kickoff]_built_with_opus_4.6__a_claude_code_hackathon (720p).mp4`
+2. `[live_session]_ama_with_cat_wu (720p).mp4`
+
+### Images:
+- `homescreen.png` - DraftCut interface
+- `cerebralvalley.jpg` - Cerebral Valley logo
+- `claude.png` - Claude AI logo
+
+---
+
+## 🎥 Hackathon Showcase Prompt
+
+**Copy and paste this entire prompt into DraftCut:**
 
 ```
-Create a 90-second hackathon showcase video for DraftCut using the uploaded videos and images.
+Create a 90-second hackathon showcase video that tells DraftCut's story — how we pushed the boundaries of AI-powered video creation with Claude Opus 4.6.
 
-CRITICAL REQUIREMENTS:
-1. Video Analysis: Use AI-analyzed highlights from BOTH videos - extract ONLY the best talking head moments with highest interest scores
-2. Motion Graphics: Layer bold, centered text overlays over talking head segments
-3. Logo Visibility: Check logo colors in assets - use HIGH CONTRAST backgrounds (if logo is dark, use white/light background; if logo is light, use dark background)
-4. Typography: ALL text must be LARGE (96-120px), BOLD, and CENTERED
-5. Pacing: Fast cuts, no dead space, energetic flow
+🎯 NARRATIVE ARC (tell the innovation story):
 
-STRUCTURE (90 seconds total):
+[0-8s] THE CHALLENGE
+- COLD OPEN: Best talking head moment from hackathon kickoff video
+- Show the problem: "Video editing takes hours of manual work"
+- Visual: Dynamic talking head with energy
+- Audio: Let speaker set the stage
 
-[0-5s] COLD OPEN - Talking Head + Lower Third
-- Use BEST talking head clip from either video (highest interest score)
-- LowerThird with speaker name (if identifiable)
-- Keep audio, let them speak
+[8-15s] THE INNOVATION
+- IntroTitleCard:
+  * Title: "DraftCut"
+  * Subtitle: "Built with Claude Opus 4.6"
+  * Tagline: "AI video editor that actually understands what you want"
+  * Background: #1a1a2e, Title: #ffffff, Accent: #8B5CF6
+  * Font: 120px title, bold, centered
 
-[5-10s] TITLE CARD - IntroTitleCard
-- Title: "DraftCut"
-- Subtitle: "AI-Powered Video Editing"
-- Background: #1a1a2e (dark)
-- Title color: #ffffff (white)
-- Accent: #8B5CF6 (purple)
-- Font size: 120px title, 64px subtitle
+[15-30s] HOW IT WORKS (3 steps)
+Show the revolutionary workflow:
 
-[10-20s] PROBLEM + SOLUTION - Talking Head + TextReveal
-- Continue talking head OR new clip
-- Overlay TextReveal (transparent background):
-  - Text: "Create videos with just a prompt"
-  - Style: slideUp
-  - Font size: 108px
-  - Bold, centered
-  - Color: #ffffff with dark text shadow for readability
+Step 1: "Just describe your video" (5s)
+- ImageSlideshow: homescreen.png with Ken Burns zoom
+- TextReveal overlay: "Text prompt → AI generates complete video"
+- Bold, centered, 108px, white text with shadow
 
-[20-35s] DEMO SHOWCASE - ImageSlideshow + KineticTypography
-- ImageSlideshow with homescreen.png
-  - Ken Burns: zoomIn (slow, 15 seconds)
-  - No caption
-- Overlay KineticTypography (transparent):
-  - Lines:
-    * "🎬 AI Video Generation"
-    * "✂️ Smart Clip Selection"
-    * "🎨 Motion Graphics"
-  - Animation: bounce
-  - Timing: word
-  - Font size: 96px
-  - Bold, centered, white text
+Step 2: "AI analyzes hours of footage" (5s)
+- Talking head clip showing AI analysis happening
+- KineticTypography overlay:
+  * "🎬 Watches videos for you"
+  * "✂️ Finds best moments automatically"
+  * "🎨 Adds motion graphics"
+  * Animation: bounce, 96px, bold, centered
 
-[35-50s] HACKATHON RECOGNITION - Talking Head + TextReveal + BrandLogo
-- Use another high-energy talking head clip
-- 35-42s: TextReveal overlay
-  - Text: "Built with Claude Opus 4.6"
-  - Style: wordPop
-  - Font size: 96px
-  - Bold, centered
-  - Color: #8B5CF6 (purple)
-- 42-46s: BrandLogo (claude.png)
-  - Check logo colors first!
-  - If logo is dark: backgroundColor: "#ffffff"
-  - If logo is light: backgroundColor: "#1a1a2e"
-  - Animation: pulse
-  - Scale: 2.0 (large and prominent)
-  - Position: center
-- 46-50s: BrandLogo (cerebralvalley.jpg)
-  - Check logo colors!
-  - Use contrasting background
-  - Animation: fadeIn
-  - Scale: 1.8
-  - Position: center
+Step 3: "Refine via chat, export in seconds" (5s)
+- Quick demo clip or screenshot
+- TextReveal: "Conversational editing → Professional results"
 
-[50-70s] KEY FEATURES - Split Talking Head + Feature Callouts
-- Use 2-3 rapid talking head clips (3-5s each)
-- Between clips, insert TextReveal (1-2s each):
-  - "Browser-Based" (bold, 108px)
-  - "No Installation" (bold, 108px)
-  - "AI-Powered" (bold, 108px)
-- All text: transparent background, white with shadow, centered
+[30-50s] PUSHING BOUNDARIES WITH OPUS 4.6
+Showcase the technical innovation:
 
-[70-85s] SOCIAL PROOF - Talking Head + Stats
-- Use enthusiastic talking head moment
-- Overlay CountUpNumber:
-  - from: 0, to: 100
-  - suffix: "%"
-  - prefix: "AI Accuracy: "
-  - Font size: 120px
-  - Bold, centered
-  - Color: #00d9ff (cyan)
-  - Duration: 2 seconds
+- Talking head: energetic moment from AMA or kickoff (5s)
+- TextReveal: "Multi-modal AI mastery" (3s)
+  * 108px, bold, purple (#8B5CF6)
+- Show capabilities (12s):
+  * BrandLogo (claude.png):
+    - Check colors! Use contrasting background
+    - Scale: 2.5 (huge and prominent)
+    - Animation: pulse
+    - Text overlay: "Opus 4.6 powered"
+  * Quick succession of feature callouts:
+    - "Analyzes video frames"
+    - "Generates structured JSON"
+    - "Creates motion graphics"
+    - "Iterates with chat"
 
-[85-90s] CALL TO ACTION - OutroCTA
-- Heading: "Start Creating Today"
-- CTA text: "Try DraftCut Free"
-- Background: #1a1a2e
-- Button color: #8B5CF6
-- Button text: #ffffff
-- Logo: homescreen.png thumbnail (small, corner)
+[50-70s] THE BREAKTHROUGH
+Why this matters for the hackathon theme:
 
-AUDIO:
-- Keep original audio from talking head segments
-- Lower volume during text overlays (if talking continues)
-- NO background music (let speakers shine)
+- Best talking head moment (show excitement) (8s)
+- TextReveal series (12s):
+  * "From 2 hours of footage..." (3s)
+  * "...to 90-second video..." (3s)
+  * "...in 30 seconds" (3s)
+  * "No timeline. No manual cuts. Just AI." (3s)
+  * All 108px, bold, centered, white with shadow
 
-TRANSITIONS:
-- 0.3s crossfades between major sections
-- Jump cuts between talking head clips (no fade)
-- Smooth skill transitions
+[70-85s] HACKATHON RECOGNITION
+- BrandLogo montage:
+  * Cerebral Valley logo (cerebralvalley.jpg)
+    - Check colors, use contrasting background
+    - Scale: 2.0, animation: fadeIn, 4s
+  * Text: "Claude Code Hackathon" (3s)
+  * Text: "Celebrating One Year of Building with Claude" (3s)
+  * All overlays bold, centered, 96px
 
-MOTION GRAPHICS RULES:
-✅ ALL TEXT: Bold, centered, large (96-120px)
-✅ Text over video: Transparent background + text shadow for readability
-✅ Logos: CHECK COLORS, use contrasting backgrounds, large scale (1.8-2.0x)
-✅ Lower thirds: Keep visible but not distracting
-✅ No static moments: constant motion, quick cuts
-✅ Talking heads: Use highest interest score clips only
+[85-90s] CALL TO ACTION
+- OutroCTA:
+  * Heading: "Experience the Future of Video Editing"
+  * CTA: "Try DraftCut"
+  * Subtext: "Built with ❤️ and Opus 4.6"
+  * Background: #1a1a2e
+  * Button: #8B5CF6
+  * Logo: homescreen.png (small, corner)
 
-BRAND COLORS:
+---
+
+📐 VISUAL REQUIREMENTS (keep these throughout):
+✅ ALL text: 96-120px, bold, centered
+✅ High contrast: check logo colors, use opposite backgrounds
+✅ Talking heads: ONLY use highest interest score clips (AI analyzed)
+✅ Fast pacing: 0.3s transitions, no dead space
+✅ Energy: Keep momentum, show excitement about the innovation
+
+🎨 BRAND COLORS:
 - Primary: #8B5CF6 (purple)
 - Secondary: #00d9ff (cyan)
 - Dark: #1a1a2e
 - Light: #ffffff
+
+🎵 AUDIO:
+- Keep original talking head audio (authentic hackathon energy)
+- Lower volume during text overlays
+- NO background music (let the story speak)
+
+---
+
+THE STORY: This isn't just a video editor — it's proof that Opus 4.6 enables entirely new workflows. We're showing what happens when you combine Claude's reasoning with video understanding, structured outputs, and iterative refinement. Video editing, reimagined.
 ```
 
 ---
 
-## 🎯 Key Features to Highlight:
+## 🎯 Why This Prompt Works for the Hackathon
 
-1. **AI Video Analysis** - Show it automatically finds best moments
-2. **Smart Clip Selection** - Extracts highlights from long videos
-3. **Motion Graphics** - Professional overlays and animations
-4. **Browser-Based** - No installation required
-5. **Claude Opus 4.6** - Built with cutting-edge AI
-6. **Hackathon Winner** - Cerebral Valley recognition
+**Theme Alignment:**
+- ✅ **"Built with Opus 4.6"** - Prominently featured throughout
+- ✅ **"Pushing boundaries"** - Shows novel workflow innovation
+- ✅ **Agentic approach** - AI does the hard work (analysis, generation, refinement)
+- ✅ **Celebration** - Marks one year of Claude Code
 
----
+**Technical Innovation:**
+- Multi-modal AI (video analysis + text generation + structured outputs)
+- Novel workflow (replaces hours of manual work)
+- Conversational iteration (chat-based refinement)
+- Browser-native AI (everything runs locally)
 
-## 💡 Visual Style Guide:
-
-### Typography:
-- **All text overlays**: 96-120px, bold, centered
-- **Use text shadows** for readability over video: `2px 2px 8px rgba(0,0,0,0.8)`
-- **Font**: Inter (bold weight)
-
-### Colors:
-- **Dark backgrounds**: #1a1a2e, #000000
-- **Light backgrounds**: #ffffff, #f5f5f5
-- **Accent purple**: #8B5CF6
-- **Accent cyan**: #00d9ff
-- **Text**: Always high contrast (white on dark, dark on light)
-
-### Logo Display:
-**CRITICAL - Check Before Using:**
-
-1. **Claude logo (claude.png)**:
-   - If dark logo → Use `backgroundColor: "#ffffff"` or `"#f5f5f5"`
-   - If light logo → Use `backgroundColor: "#1a1a2e"` or `"#000000"`
-   - Scale: 2.0 (very prominent)
-   - Center positioning
-
-2. **Cerebral Valley logo**:
-   - Same contrast rules
-   - Scale: 1.8
-   - Center positioning
-
-3. **DraftCut screenshot** (homescreen.png):
-   - Dark interface → Can use on any background
-   - Use Ken Burns zoom for interest
-
-### Motion:
-- **Talking heads**: Quick cuts, keep energy high
-- **Text reveals**: Fast animations (wordPop, slideUp)
-- **Logos**: Smooth entrances (pulse, fadeIn)
-- **Transitions**: 0.3s crossfades max
+**Special Prize Potential:**
+- **"Most Creative Opus 4.6 Exploration"** - Uses Opus for complex multi-step video generation
+- **"The 'Keep Thinking' Prize"** - Iterative, agentic video refinement
 
 ---
 
-## 🚀 Usage Instructions:
+## 💡 Alternative 60-Second Version
 
-### Step 1: Upload Assets
-- Upload both MP4 videos first
-- Wait for "Video analyzed!" toasts (~60 seconds)
-- Then upload 3 images (homescreen, cerebralvalley, claude)
-
-### Step 2: Generate
-- Copy the full prompt from above
-- Paste into DraftCut
-- Click "Generate Video"
-- Wait ~30 seconds for AI generation
-
-### Step 3: Review
-- Check talking head moments are good clips
-- Verify logo backgrounds have proper contrast
-- Ensure text is large, bold, and centered
-- Test pacing (should feel energetic, not slow)
-
-### Step 4: Refine (if needed)
-Via chat panel:
-```
-"Make all text larger and bolder"
-"Change claude logo background to white for better contrast"
-"Speed up transitions - use 0.2s crossfades"
-"Replace clip at 10s with a more energetic moment"
-```
-
-### Step 5: Export
-- Format: WebM (YouTube-compatible) or MP4 (Diffusion Studios)
-- Quality: High (10 Mbps) or Ultra (25 Mbps)
-- Resolution: 1x (1920x1080)
-
----
-
-## 📊 Expected Results:
-
-**Timeline Breakdown:**
-- **Talking head clips**: 40-50 seconds (using AI-selected highlights)
-- **Motion graphics**: 30-40 seconds (overlays and standalone)
-- **Logos**: 8 seconds total (prominent display)
-- **CTA**: 5 seconds (strong ending)
-
-**Visual Style:**
-- Bold, centered typography throughout
-- High contrast (no hard-to-read text)
-- Prominent logo display with correct backgrounds
-- Fast-paced, energetic editing
-- Professional motion graphics
-
-**Showcase Features:**
-- AI video analysis (automatically finds best moments)
-- Smart clip selection (no manual scrubbing)
-- Professional motion graphics
-- Browser-based editing
-- Claude Opus 4.6 integration
-
----
-
-## 🎬 Alternative Shorter Version (60s):
-
-If you want a faster-paced 60-second version:
+If you need a faster-paced version:
 
 ```
-[0-5s] Cold open + Lower Third
-[5-10s] Title Card
-[10-25s] Demo showcase (homescreen)
-[25-35s] Recognition (Claude + Cerebral Valley logos)
-[35-50s] Features (3 talking head clips + text overlays)
-[50-55s] Stats
+[0-5s] Cold open + problem
+[5-10s] Title card
+[10-25s] How it works (3 steps, 5s each)
+[25-40s] Opus 4.6 capabilities
+[40-50s] The breakthrough
+[50-55s] Hackathon recognition
 [55-60s] CTA
 ```
 
 ---
 
-## 🐛 Troubleshooting:
+## 🐛 Troubleshooting
 
-**"Logo is hard to see"**
-→ Check asset colors, use opposite background (dark logo = light background)
-
-**"Text is too small"**
-→ Via chat: "Make all text 120px and bold"
-
-**"Talking head clips are boring"**
-→ Video analysis picks best moments automatically. If still boring, use chat: "Replace with more energetic clip"
-
-**"Too many gaps"**
-→ Via chat: "Remove all gaps, make seamless transitions"
-
-**"Pacing too slow"**
-→ Via chat: "Speed up - use 0.2s transitions, cut dead space"
+**"Logos hard to see"** → Check colors, use opposite background (dark logo = light bg)
+**"Too slow"** → Via chat: "Speed up, use 0.2s transitions"
+**"Needs more energy"** → "Use more energetic talking head clips"
+**"Text too small"** → "Make all text 120px and bold"
 
 ---
 
-**This prompt showcases DraftCut's most impressive features while creating a professional, energetic hackathon demo!** 🎬✨
+## 🎊 The Bigger Picture
+
+DraftCut demonstrates what's possible when you:
+1. Trust AI to understand complex creative intent
+2. Let Opus 4.6 handle multi-modal reasoning
+3. Build workflows that augment human creativity
+4. Ship browser-native AI tools
+
+**This is what one year of Claude Code enables.** 🚀✨
