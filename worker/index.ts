@@ -188,31 +188,48 @@ async function handleProxyImage(reqUrl: URL): Promise<Response> {
     return Response.json({ error: 'Missing url parameter' }, { status: 400 });
   }
 
+  console.log('[Proxy] Fetching:', targetUrl);
+
   try {
     const res = await fetch(targetUrl, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Accept: 'image/*,audio/*,*/*',
+        Referer: 'https://www.jamendo.com/',
       },
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(60000), // Increased timeout for audio files
     });
 
+    console.log('[Proxy] Response status:', res.status);
+    console.log('[Proxy] Response headers:', Object.fromEntries(res.headers.entries()));
+
     if (!res.ok) {
-      return Response.json({ error: `Upstream error: ${res.status}` }, { status: 502 });
+      console.error('[Proxy] Upstream error:', res.status, res.statusText);
+      return Response.json(
+        {
+          error: `Upstream error: ${res.status} ${res.statusText}`,
+          url: targetUrl
+        },
+        { status: 502 }
+      );
     }
 
     const contentType = res.headers.get('content-type') || 'application/octet-stream';
     const buffer = await res.arrayBuffer();
 
+    console.log('[Proxy] Successfully proxied:', buffer.byteLength, 'bytes');
+
     return new Response(buffer, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600',
+        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Proxy fetch failed';
-    return Response.json({ error: message }, { status: 500 });
+    console.error('[Proxy] Error:', message);
+    return Response.json({ error: message, url: targetUrl }, { status: 500 });
   }
 }

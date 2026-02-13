@@ -144,10 +144,20 @@ export async function getJamendoMusic(
     name: track.name,
     artist: track.artist_name,
     duration: track.duration,
+    audio: track.audio,
+    audiodownload: track.audiodownload,
   });
 
-  // Download the high-quality version if available, otherwise use standard
-  const audioUrl = track.audiodownload || track.audio;
+  // Use the standard audio URL (more reliable than audiodownload)
+  // Jamendo audio URLs work better through proxy
+  let audioUrl = track.audio || track.audiodownload;
+
+  // Ensure URL doesn't have trailing slash (can cause issues)
+  if (audioUrl.endsWith('/')) {
+    audioUrl = audioUrl.slice(0, -1);
+  }
+
+  console.log('[Jamendo] Using audio URL:', audioUrl);
   const blob = await downloadJamendoTrack(audioUrl);
 
   return { blob, metadata: track };
