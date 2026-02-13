@@ -162,10 +162,14 @@ export async function generateVideoSpec(
     }
 
     if (Array.isArray(spec.assets)) {
-      // Transform assets: some AIs use 'name' instead of 'filename'
+      // Transform assets: some AIs use 'name' or 'src' instead of 'filename'
       spec.assets = spec.assets.map((a: any) => {
-        if (a && typeof a === 'object' && 'name' in a && !('filename' in a)) {
-          return { ...a, filename: a.name };
+        if (a && typeof a === 'object' && !('filename' in a)) {
+          // Try 'name' first, then 'src', then 'url'
+          const filename = a.name || a.src || a.url;
+          if (filename) {
+            return { ...a, filename };
+          }
         }
         return a;
       });
