@@ -392,7 +392,7 @@ async function renderSkillClip(
   }
 
   // For other skills, render using Remotion Player + html2canvas
-  await renderRemotionSkillToCanvas(ctx, clip, frame, spec, assetBlobUrls);
+  await renderRemotionSkillToCanvas(ctx, clip, currentFrame, spec, assetBlobUrls);
 }
 
 /**

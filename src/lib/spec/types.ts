@@ -75,7 +75,12 @@ export type SkillType =
   | 'IntroTitleCard'
   | 'OutroCTA'
   | 'ImageSlideshow'
-  | 'TextReveal';
+  | 'TextReveal'
+  | 'TerminalWindow'
+  | 'KineticTypography'
+  | 'BrandLogo'
+  | 'CountUpNumber'
+  | 'ProgressBar';
 
 export interface BrandKit {
   logoAssetId?: string;
