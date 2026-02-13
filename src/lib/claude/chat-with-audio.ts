@@ -1,5 +1,6 @@
 /**
- * Enhanced chat that supports ElevenLabs voice narration and sound effects
+ * Enhanced chat that supports ElevenLabs voice narration and sound effects,
+ * plus music generation via Beatoven or Replicate
  */
 
 import { chatEditSpec } from './chat';
@@ -10,6 +11,9 @@ import {
   isSoundEffectRequest,
   ELEVENLABS_VOICES,
 } from '@/lib/ai/elevenlabs';
+import { generateMusic } from '@/lib/ai/music';
+import { generateMusicBeatoven } from '@/lib/ai/beatoven';
+import { getPixabayMusic, getPixabaySoundEffect } from '@/lib/ai/pixabay';
 import { saveAsset } from '@/lib/storage/assets';
 import type { Asset, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
@@ -38,23 +42,22 @@ export async function chatEditSpecWithAudio(
     .filter((m) => m.role === 'user')
     .pop()?.content || '';
 
-  // Check if user is requesting voice narration or sound effects
+  // Check if user is requesting voice narration, sound effects, or music
   const isVoiceRequest = isVoiceNarrationRequest(lastUserMessage);
   const isSoundRequest = isSoundEffectRequest(lastUserMessage);
+  const isMusicRequest = isMusicGenerationRequest(lastUserMessage);
 
   let generatedAudio: ChatWithAudioResult['generatedAudio'];
 
-  // Generate audio if requested and ElevenLabs key is available
+  // Generate audio if requested (voice or sound effects)
   if (isVoiceRequest || isSoundRequest) {
-    const elevenlabsKey = await loadAPIKey('elevenlabs');
+    if (isVoiceRequest) {
+      // Voice narration - only ElevenLabs supports this
+      const elevenlabsKey = await loadAPIKey('elevenlabs');
 
-    if (elevenlabsKey) {
-      try {
-        let audioBlob: Blob;
-        let filename: string;
-
-        if (isVoiceRequest) {
-          // Extract the text to narrate (look for quotes or "say X" patterns)
+      if (elevenlabsKey) {
+        try {
+          // Extract the text to narrate
           const textMatch =
             lastUserMessage.match(/"([^"]+)"/) ||
             lastUserMessage.match(/'([^']+)'/) ||
@@ -65,57 +68,307 @@ export async function chatEditSpecWithAudio(
             ? textMatch[1].trim()
             : 'Voice narration placeholder';
 
-          // Use default voice (Rachel - professional female)
-          audioBlob = await generateVoiceNarration(
+          console.log('[ElevenLabs] Generating voice narration');
+
+          const audioBlob = await generateVoiceNarration(
             textToNarrate,
             elevenlabsKey,
             ELEVENLABS_VOICES.rachel
           );
-          filename = `voice-narration-${Date.now()}.mp3`;
-        } else {
-          // Sound effect request
-          // Extract the sound description
-          const soundMatch =
-            lastUserMessage.match(/sound (?:of |effect )?(.+?)(?:\.|$)/i) ||
-            lastUserMessage.match(/sfx\s+(.+?)(?:\.|$)/i);
+          const filename = `voice-narration-${Date.now()}.mp3`;
 
-          const soundDescription = soundMatch
-            ? soundMatch[1].trim()
-            : lastUserMessage;
+          // Save as asset
+          const audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+          const asset = await saveAsset(audioFile);
+          const blobUrl = URL.createObjectURL(audioFile);
 
-          audioBlob = await generateSoundEffect(soundDescription, elevenlabsKey, {
+          generatedAudio = { asset, blobUrl };
+          assets = [...assets, asset];
+
+          messages = [
+            ...messages,
+            {
+              id: `system-${Date.now()}`,
+              role: 'assistant',
+              content: `Voice narration generated and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
+              timestamp: Date.now(),
+            },
+          ];
+        } catch (error) {
+          console.error('[ElevenLabs] Voice generation failed:', error);
+        }
+      } else {
+        console.log('[Voice] No ElevenLabs API key found');
+      }
+    } else {
+      // Sound effect request - try Pixabay first, then ElevenLabs
+      const pixabayKey = await loadAPIKey('pixabay');
+      const elevenlabsKey = await loadAPIKey('elevenlabs');
+
+      const soundDescription = extractSoundEffectDescription(lastUserMessage);
+
+      // Try Pixabay first
+      if (pixabayKey) {
+        try {
+          console.log('[Pixabay] Searching for sound effect');
+          const { blob, metadata } = await getPixabaySoundEffect(soundDescription, pixabayKey);
+
+          const filename = `pixabay-sfx-${metadata.id}.mp3`;
+          const audioFile = new File([blob], filename, { type: 'audio/mpeg' });
+          const asset = await saveAsset(audioFile);
+          const blobUrl = URL.createObjectURL(audioFile);
+
+          generatedAudio = { asset, blobUrl };
+          assets = [...assets, asset];
+
+          messages = [
+            ...messages,
+            {
+              id: `system-${Date.now()}`,
+              role: 'assistant',
+              content: `Sound effect found on Pixabay and saved as asset "${asset.id}" (${metadata.tags}, ${metadata.duration}s). You can now reference this audio in the video spec.`,
+              timestamp: Date.now(),
+            },
+          ];
+
+          console.log('[Pixabay] Sound effect retrieved successfully');
+        } catch (pixabayError) {
+          console.log('[Pixabay] Failed, trying ElevenLabs fallback');
+
+          // Fallback to ElevenLabs
+          if (elevenlabsKey) {
+            try {
+              const audioBlob = await generateSoundEffect(soundDescription, elevenlabsKey, {
+                durationSeconds: 3.0,
+                promptInfluence: 0.3,
+              });
+              const filename = `sound-effect-${Date.now()}.mp3`;
+
+              const audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+              const asset = await saveAsset(audioFile);
+              const blobUrl = URL.createObjectURL(audioFile);
+
+              generatedAudio = { asset, blobUrl };
+              assets = [...assets, asset];
+
+              messages = [
+                ...messages,
+                {
+                  id: `system-${Date.now()}`,
+                  role: 'assistant',
+                  content: `Sound effect generated with ElevenLabs and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
+                  timestamp: Date.now(),
+                },
+              ];
+
+              console.log('[ElevenLabs] Sound effect generated successfully');
+            } catch (error) {
+              console.error('[ElevenLabs] Sound effect generation failed:', error);
+            }
+          }
+        }
+      } else if (elevenlabsKey) {
+        // No Pixabay key, use ElevenLabs directly
+        try {
+          console.log('[ElevenLabs] Generating sound effect (no Pixabay key)');
+          const audioBlob = await generateSoundEffect(soundDescription, elevenlabsKey, {
             durationSeconds: 3.0,
             promptInfluence: 0.3,
           });
-          filename = `sound-effect-${Date.now()}.mp3`;
+          const filename = `sound-effect-${Date.now()}.mp3`;
+
+          const audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+          const asset = await saveAsset(audioFile);
+          const blobUrl = URL.createObjectURL(audioFile);
+
+          generatedAudio = { asset, blobUrl };
+          assets = [...assets, asset];
+
+          messages = [
+            ...messages,
+            {
+              id: `system-${Date.now()}`,
+              role: 'assistant',
+              content: `Sound effect generated and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
+              timestamp: Date.now(),
+            },
+          ];
+        } catch (error) {
+          console.error('[ElevenLabs] Sound effect generation failed:', error);
         }
+      } else {
+        console.log('[Sound Effect] No Pixabay or ElevenLabs API key found');
+      }
+    }
+  }
 
-        // Save as asset
-        const audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+  // Generate music if requested
+  if (isMusicRequest) {
+    console.log('[Music] Request detected');
+
+    // Try Pixabay first (instant), then generative AI (slow)
+    const pixabayKey = await loadAPIKey('pixabay');
+    const beatovenKey = await loadAPIKey('beatoven');
+    const replicateKey = await loadAPIKey('replicate');
+
+    const musicDescription = extractMusicDescription(lastUserMessage);
+
+    // Extract duration if specified
+    const durationMatch = lastUserMessage.match(/(\d+)\s*(?:second|sec|s)/i);
+    const duration = durationMatch ? parseInt(durationMatch[1]) : undefined;
+
+    // Try Pixabay first (instant search)
+    if (pixabayKey) {
+      try {
+        console.log('[Pixabay] Searching for music:', musicDescription);
+        const { blob, metadata } = await getPixabayMusic(musicDescription, pixabayKey, duration);
+
+        const filename = `pixabay-music-${metadata.id}.mp3`;
+        const audioFile = new File([blob], filename, { type: 'audio/mpeg' });
         const asset = await saveAsset(audioFile);
-
-        // Create blob URL for immediate use
         const blobUrl = URL.createObjectURL(audioFile);
 
         generatedAudio = { asset, blobUrl };
-
-        // Add to assets array for AI to reference
         assets = [...assets, asset];
 
-        // Add system message to let AI know audio was generated
         messages = [
           ...messages,
           {
             id: `system-${Date.now()}`,
             role: 'assistant',
-            content: `Audio generated successfully and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
+            content: `Music found on Pixabay and saved as asset "${asset.id}" (${metadata.tags}, ${metadata.duration}s). You can now add this music to an audio track in the video spec.`,
             timestamp: Date.now(),
           },
         ];
-      } catch (error) {
-        console.error('ElevenLabs generation failed:', error);
-        // Continue with normal chat - AI will respond that audio generation failed
+
+        console.log('[Pixabay] Music retrieved successfully');
+      } catch (pixabayError) {
+        console.log('[Pixabay] Failed, trying generative AI fallback');
+
+        // Fallback to generative AI (Beatoven or Replicate)
+        if (beatovenKey || replicateKey) {
+          try {
+            let audioBlob: Blob;
+            let filename: string;
+            let provider: string;
+
+            if (beatovenKey) {
+              console.log('[Beatoven] Generating music');
+              audioBlob = await generateMusicBeatoven(musicDescription, beatovenKey);
+              filename = `music-beatoven-${Date.now()}.mp3`;
+              provider = 'Beatoven';
+            } else if (replicateKey) {
+              console.log('[Replicate] Generating music');
+              const genDuration = duration || 20;
+              audioBlob = await generateMusic(musicDescription, genDuration, replicateKey);
+              filename = `music-replicate-${Date.now()}.wav`;
+              provider = 'Replicate';
+            } else {
+              throw new Error('No generative music API key available');
+            }
+
+            const mimeType = filename.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav';
+            const audioFile = new File([audioBlob], filename, { type: mimeType });
+            const asset = await saveAsset(audioFile);
+            const blobUrl = URL.createObjectURL(audioFile);
+
+            generatedAudio = { asset, blobUrl };
+            assets = [...assets, asset];
+
+            messages = [
+              ...messages,
+              {
+                id: `system-${Date.now()}`,
+                role: 'assistant',
+                content: `Music generated with ${provider} and saved as asset "${asset.id}". You can now add this music to an audio track in the video spec.`,
+                timestamp: Date.now(),
+              },
+            ];
+
+            console.log(`[${provider}] Music generated successfully`);
+          } catch (error) {
+            console.error('[Music] All providers failed:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+            messages = [
+              ...messages,
+              {
+                id: `system-${Date.now()}`,
+                role: 'assistant',
+                content: `Music generation failed: ${errorMessage}. Please check your API keys.`,
+                timestamp: Date.now(),
+              },
+            ];
+          }
+        }
       }
+    } else if (beatovenKey || replicateKey) {
+      // No Pixabay key, use generative AI directly
+      try {
+        let audioBlob: Blob;
+        let filename: string;
+        let provider: string;
+
+        if (beatovenKey) {
+          console.log('[Beatoven] Generating music (no Pixabay key)');
+          audioBlob = await generateMusicBeatoven(musicDescription, beatovenKey);
+          filename = `music-beatoven-${Date.now()}.mp3`;
+          provider = 'Beatoven';
+        } else if (replicateKey) {
+          console.log('[Replicate] Generating music (no Pixabay key)');
+          const genDuration = duration || 20;
+          audioBlob = await generateMusic(musicDescription, genDuration, replicateKey);
+          filename = `music-replicate-${Date.now()}.wav`;
+          provider = 'Replicate';
+        } else {
+          throw new Error('No music API key available');
+        }
+
+        const mimeType = filename.endsWith('.mp3') ? 'audio/mpeg' : 'audio/wav';
+        const audioFile = new File([audioBlob], filename, { type: mimeType });
+        const asset = await saveAsset(audioFile);
+        const blobUrl = URL.createObjectURL(audioFile);
+
+        generatedAudio = { asset, blobUrl };
+        assets = [...assets, asset];
+
+        messages = [
+          ...messages,
+          {
+            id: `system-${Date.now()}`,
+            role: 'assistant',
+            content: `Music generated with ${provider} and saved as asset "${asset.id}". You can now add this music to an audio track in the video spec.`,
+            timestamp: Date.now(),
+          },
+        ];
+
+        console.log(`[${provider}] Music generated successfully`);
+      } catch (error) {
+        console.error('[Music] Generation failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        messages = [
+          ...messages,
+          {
+            id: `system-${Date.now()}`,
+            role: 'assistant',
+            content: `Music generation failed: ${errorMessage}. Please check your API keys.`,
+            timestamp: Date.now(),
+          },
+        ];
+      }
+    } else {
+      console.log('[Music] No API keys found (Pixabay, Beatoven, or Replicate)');
+
+      messages = [
+        ...messages,
+        {
+          id: `system-${Date.now()}`,
+          role: 'assistant',
+          content: `Music requires a Pixabay, Beatoven, or Replicate API key. Please add one in the settings.`,
+          timestamp: Date.now(),
+        },
+      ];
     }
   }
 
@@ -175,4 +428,49 @@ export function extractSoundEffectDescription(message: string): string {
 
   // Return the whole message as description
   return message;
+}
+
+/**
+ * Helper to detect if user is requesting music generation
+ */
+export function isMusicGenerationRequest(message: string): boolean {
+  const keywords = [
+    'music',
+    'background music',
+    'bgm',
+    'soundtrack',
+    'audio track',
+    'musical',
+    'instrumental',
+    'beat',
+    'song',
+  ];
+
+  const lowerMessage = message.toLowerCase();
+
+  // Check for music keywords
+  const hasKeyword = keywords.some(keyword => lowerMessage.includes(keyword));
+
+  // Exclude if it's asking about existing music or just referencing music
+  const isQuestion = /\b(what|which|where|when|how|why|is|are|do|does)\b/i.test(message);
+
+  return hasKeyword && !isQuestion;
+}
+
+/**
+ * Extract music description from user message
+ */
+export function extractMusicDescription(message: string): string {
+  // Remove common prefixes
+  let description = message
+    .replace(/^(?:add|generate|create|make|give me|i want|i need)\s+/i, '')
+    .replace(/^(?:a |an |some )?(?:background )?music\s+(?:that is |that's |with )?/i, '')
+    .trim();
+
+  // If we removed too much, use the full message
+  if (description.length < 10) {
+    description = message;
+  }
+
+  return description;
 }

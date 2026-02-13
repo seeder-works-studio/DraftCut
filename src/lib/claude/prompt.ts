@@ -195,6 +195,7 @@ export function buildSystemPrompt(
     '- Place audio assets on the audio track',
     '- Sync video duration to audio length',
     '- Use CaptionsPop to visualize spoken words',
+    '- Note: Music can be requested in chat after generation (Pixabay stock music or AI-generated via Beatoven/Replicate)',
     '',
     '🎬 LAYERING STRUCTURE:',
     'Always structure tracks as:',
