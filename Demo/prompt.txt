@@ -1,10 +1,35 @@
-Create a 30-second demo video for "DraftCut" — an AI video editor built at the "Built with Opus 4.6: Claude Code Hackathon" by Cerebral Valley x Anthropic.
+Create a dynamic 45-second demo video for "DraftCut" — an AI video editor built at the "Built with Opus 4.6: Claude Code Hackathon" by Cerebral Valley x Anthropic.
 
-Use all uploaded screenshots as a slideshow. Structure:
+Use all uploaded screenshots as an animated slideshow with Ken Burns effects (cinematic zoom and pan). Structure:
 
-1. INTRO (0-3s): Bold title card — "DraftCut" with subtitle "AI Video Editor — Built with Claude Code"
-2. HACKATHON CONTEXT (3-12s): Show the Discord announcement, Opus 4.6 intro, and speaker screenshots with captions like "500 builders. $100K in prizes. One week to ship."
-3. THE TOOL (12-22s): Show the hackathon landing page and registration screenshots with captions: "Describe a video. Upload assets. AI drafts the edit." then "Runs in your browser. 100% private."
-4. OUTRO (22-30s): Call to action — "Try DraftCut" with subtitle "Built with Opus 4.6 + Claude Code"
+1. INTRO SEQUENCE (0-5s):
+   - Animated title card: "DraftCut" in bold gold (#D4A574) with fade-in
+   - Subtitle appears: "AI-Powered Video Editor" with slide animation
+   - Subtitle: "Built with Claude Code" in Anthropic purple (#8B5CF6)
 
-Dark background (#0a0a0a). Brand colors: warm gold #D4A574, Anthropic purple #8B5CF6. Bold modern captions. Energetic pacing.
+2. PROBLEM SETUP (5-15s):
+   - Zoom/pan through Discord announcement, Opus 4.6 intro, and speaker screenshots
+   - Lower thirds appear with captions: "500 builders", "$100K in prizes", "One week to ship"
+   - Ken Burns effects create cinematic motion on each screenshot
+   - Use fade transitions between slides
+
+3. SOLUTION SHOWCASE (15-35s):
+   - Pan through hackathon landing page and registration screenshots with animated Ken Burns effects
+   - Text reveals appear with typewriter effect: "Describe your video"
+   - Next caption slides in: "Upload your assets"
+   - Third caption pops in: "AI drafts the complete edit"
+   - Final caption fades: "Runs in your browser. 100% private."
+   - Each caption uses gold and purple brand colors with drop shadows
+
+4. CALL TO ACTION (35-45s):
+   - Bold title card emerges: "Try DraftCut"
+   - Animated subtitle slides up: "Built with Opus 4.6 + Claude Code"
+   - Final text pop: "draftcut.ai" (or similar CTA)
+
+Visual Style:
+- Dark background (#0a0a0a) for contrast
+- Brand colors: gold #D4A574 for primary text, Anthropic purple #8B5CF6 for accents
+- Ken Burns effects on all image slides (smooth zoom + pan)
+- Multiple animation styles: fade, slide, typewriter reveals, pop animations
+- Professional lower thirds for labels and captions
+- Energetic pacing with smooth transitions

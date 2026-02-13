@@ -32,7 +32,7 @@ function extractUrl(text: string): string | null {
 
 export default function HomePage() {
   const router = useRouter();
-  const { assets, isGenerating, setSpec, setIsGenerating, addAsset } =
+  const { assets, isGenerating, setSpec, setIsGenerating, addAsset, setAssetBlobUrl } =
     useProjectStore();
 
   const [aiConfig, setAiConfig] = useState<AIProviderConfig>({
@@ -136,7 +136,10 @@ export default function HomePage() {
             for (const imageFile of websiteData.images) {
               const asset = await saveAsset(imageFile);
               addAsset(asset);
-              logger.debug('HomePage', 'Image asset saved', { assetId: asset.id });
+              // Create blob URL for immediate use (same as manual upload)
+              const blobUrl = URL.createObjectURL(imageFile);
+              setAssetBlobUrl(asset.id, blobUrl);
+              logger.debug('HomePage', 'Image asset saved with blob URL', { assetId: asset.id });
             }
           }
 
@@ -198,7 +201,10 @@ export default function HomePage() {
           const audioFile = new File([audioBlob], filename, { type: mimeType });
           const audioAsset = await saveAsset(audioFile);
           addAsset(audioAsset);
-          logger.debug('HomePage', 'Audio asset saved', { assetId: audioAsset.id });
+          // Create blob URL for immediate use (same as manual upload)
+          const audioBlobUrl = URL.createObjectURL(audioFile);
+          setAssetBlobUrl(audioAsset.id, audioBlobUrl);
+          logger.debug('HomePage', 'Audio asset saved with blob URL', { assetId: audioAsset.id });
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Music generation failed';
           logger.error('HomePage', 'Music generation error', { error: msg });

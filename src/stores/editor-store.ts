@@ -21,7 +21,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   pixelsPerSecond: 100,
 
   setCurrentTime: (currentTime) => {
-    logger.debug('EditorStore', 'Setting current time', { time: currentTime.toFixed(2) });
+    // Removed debug log - too noisy during playback
     set({ currentTime });
   },
   setIsPlaying: (isPlaying) => {
