@@ -47,3 +47,5 @@ next-env.d.ts
 /Demo/*.png
 /Demo/*.jpg
 /Demo/prompt.txt
+# Large demo videos
+Demo3/*.mp4
