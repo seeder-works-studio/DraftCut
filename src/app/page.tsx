@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { PromptInput } from '@/components/home/prompt-input';
 import { AssetUploader, AssetList } from '@/components/home/asset-uploader';
 import { SettingsDialog } from '@/components/home/settings-dialog';
+import {
+  GenerationProgressDialog,
+  type GenerationStep,
+} from '@/components/home/generation-progress-dialog';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
 import type { AgenticModeConfig } from '@/components/home/settings-dialog';
 import { Button } from '@/components/ui/button';
@@ -56,7 +60,6 @@ export default function HomePage() {
     secondaryColor: '#8b5cf6',
   });
 
-  const [statusMessage, setStatusMessage] = useState<string>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState('');
 
@@ -65,6 +68,10 @@ export default function HomePage() {
     targetScore: 85,
     maxIterations: 5,
   });
+
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progressSteps, setProgressSteps] = useState<GenerationStep[]>([]);
+  const [currentStepId, setCurrentStepId] = useState<string>();
 
   // Load API key from IndexedDB on mount
   useEffect(() => {
@@ -93,6 +100,20 @@ export default function HomePage() {
     loadSettings();
   }, []);
 
+  // Helper to update progress step status
+  const updateStepStatus = (
+    stepId: string,
+    status: GenerationStep['status'],
+    error?: string
+  ) => {
+    setProgressSteps((prev) =>
+      prev.map((s) => (s.id === stepId ? { ...s, status, error } : s))
+    );
+    if (status === 'in-progress') {
+      setCurrentStepId(stepId);
+    }
+  };
+
   const handleGenerate = async (prompt: string) => {
     logger.info('HomePage', 'Generation requested', {
       promptLength: prompt.length,
@@ -106,22 +127,104 @@ export default function HomePage() {
       return;
     }
 
+    // Check if any videos are still being analyzed
+    const videosBeingAnalyzed = assets.filter(
+      (a) => a.type === 'video' && !a.videoAnalysis?.analyzed
+    );
+
+    // Detect URL for website scraping
+    const detectedUrl = extractUrl(prompt) || websiteUrl.trim() || null;
+
+    // Check music services
+    const beatovenKey = await loadAPIKey('beatoven');
+    const replicateKey = await loadAPIKey('replicate');
+
+    // Initialize progress steps
+    const initialSteps: GenerationStep[] = [
+      ...(videosBeingAnalyzed.length > 0
+        ? [
+            {
+              id: 'video-analysis',
+              label: 'Analyzing Videos',
+              description: `Finding best moments in ${videosBeingAnalyzed.length} video${videosBeingAnalyzed.length > 1 ? 's' : ''}`,
+              status: 'in-progress' as const,
+            },
+          ]
+        : []),
+      ...(detectedUrl
+        ? [
+            {
+              id: 'website-scrape',
+              label: 'Scraping Website',
+              description: 'Extracting brand colors and images',
+              status: 'pending' as const,
+            },
+            {
+              id: 'save-images',
+              label: 'Saving Assets',
+              description: 'Storing website images',
+              status: 'pending' as const,
+            },
+          ]
+        : []),
+      ...(beatovenKey || replicateKey
+        ? [
+            {
+              id: 'music-generation',
+              label: 'Generating Music',
+              description: 'Creating background music with AI',
+              status: 'pending' as const,
+            },
+          ]
+        : []),
+      {
+        id: 'video-spec',
+        label: 'Generating Video',
+        description: 'AI is creating your video structure',
+        status: 'pending' as const,
+      },
+    ];
+
+    setProgressSteps(initialSteps);
+    setProgressOpen(true);
     setIsGenerating(true);
+
     try {
       let websiteContext: { title: string; textContent: string; url: string } | undefined;
       let currentBrandKit = { ...brandKit };
 
-      // Step 1: Detect URLs in prompt, fall back to settings URL
-      const detectedUrl = extractUrl(prompt) || websiteUrl.trim() || null;
-      logger.debug('HomePage', 'URL detection', {
-        detectedUrl,
-        hasWebsiteUrl: !!websiteUrl.trim(),
-      });
+      // Step 1: Wait for video analysis to complete
+      if (videosBeingAnalyzed.length > 0) {
+        logger.info('HomePage', 'Waiting for video analysis to complete', {
+          count: videosBeingAnalyzed.length,
+        });
 
+        // Poll until all videos are analyzed (check every 2 seconds)
+        while (true) {
+          const currentAssets = useProjectStore.getState().assets;
+          const stillAnalyzing = currentAssets.filter(
+            (a) =>
+              a.type === 'video' &&
+              !a.videoAnalysis?.analyzed &&
+              videosBeingAnalyzed.some((v) => v.id === a.id)
+          );
+
+          if (stillAnalyzing.length === 0) {
+            logger.info('HomePage', 'All videos analyzed');
+            updateStepStatus('video-analysis', 'completed');
+            break;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+
+      // Step 2: Website scraping
       if (detectedUrl) {
         const targetUrl = detectedUrl;
         logger.info('HomePage', 'Starting website scrape', { url: targetUrl });
-        setStatusMessage('Scraping website...');
+        updateStepStatus('website-scrape', 'in-progress');
+
         try {
           const websiteData = await processWebsiteUrl(targetUrl);
           logger.info('HomePage', 'Website scraped successfully', {
@@ -129,6 +232,7 @@ export default function HomePage() {
             imageCount: websiteData.images.length,
             colorCount: websiteData.colors.length,
           });
+          updateStepStatus('website-scrape', 'completed');
 
           websiteContext = {
             title: websiteData.title,
@@ -136,12 +240,13 @@ export default function HomePage() {
             url: websiteData.url,
           };
 
-          // Step 2: Store scraped images as assets
+          // Store scraped images as assets
           if (websiteData.images.length > 0) {
             logger.info('HomePage', 'Saving website images', {
               count: websiteData.images.length,
             });
-            setStatusMessage('Saving website images...');
+            updateStepStatus('save-images', 'in-progress');
+
             for (const imageFile of websiteData.images) {
               const asset = await saveAsset(imageFile);
               addAsset(asset);
@@ -150,6 +255,10 @@ export default function HomePage() {
               setAssetBlobUrl(asset.id, blobUrl);
               logger.debug('HomePage', 'Image asset saved with blob URL', { assetId: asset.id });
             }
+
+            updateStepStatus('save-images', 'completed');
+          } else {
+            updateStepStatus('save-images', 'skipped');
           }
 
           // Step 3: Apply brand colors
@@ -167,21 +276,17 @@ export default function HomePage() {
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Website scrape failed';
           logger.warn('HomePage', 'Website scrape error', { error: msg });
+          updateStepStatus('website-scrape', 'error', msg);
+          updateStepStatus('save-images', 'skipped');
           toast.warning(`Could not scrape website: ${msg}`);
         }
       }
 
-      // Step 4: Music generation (Beatoven first, fall back to Replicate)
-      const beatovenKey = await loadAPIKey('beatoven');
-      const replicateKey = await loadAPIKey('replicate');
-      logger.debug('HomePage', 'Music service availability', {
-        hasBeatoven: !!beatovenKey,
-        hasReplicate: !!replicateKey,
-      });
-
+      // Step 3: Music generation
       if (beatovenKey || replicateKey) {
         logger.info('HomePage', 'Starting music generation');
-        setStatusMessage('Generating music...');
+        updateStepStatus('music-generation', 'in-progress');
+
         try {
           const musicPrompt = websiteContext
             ? `upbeat background music for a promo video about ${websiteContext.title}`
@@ -214,16 +319,18 @@ export default function HomePage() {
           const audioBlobUrl = URL.createObjectURL(audioFile);
           setAssetBlobUrl(audioAsset.id, audioBlobUrl);
           logger.debug('HomePage', 'Audio asset saved with blob URL', { assetId: audioAsset.id });
+          updateStepStatus('music-generation', 'completed');
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Music generation failed';
           logger.error('HomePage', 'Music generation error', { error: msg });
+          updateStepStatus('music-generation', 'error', msg);
           toast.warning(`Could not generate music: ${msg}`);
         }
       }
 
-      // Step 5: Generate video spec with all enriched context
+      // Step 4: Generate video spec with all enriched context
       logger.info('HomePage', 'Starting video spec generation');
-      setStatusMessage('Generating video spec...');
+      updateStepStatus('video-spec', 'in-progress');
       const allAssets = useProjectStore.getState().assets;
       logger.debug('HomePage', 'Assets before video generation', {
         count: allAssets.length,
@@ -236,25 +343,41 @@ export default function HomePage() {
         currentBrandKit,
         aiConfig,
         websiteContext,
-        agenticMode,
-        setStatusMessage
+        agenticMode
       );
 
       logger.info('HomePage', 'Video spec generated successfully');
+      updateStepStatus('video-spec', 'completed');
+
       setSpec(spec);
       saveSetting('ai-provider', aiConfig.provider);
       saveSetting('ai-model', aiConfig.model || '');
+
+      // Small delay to show completion
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
       toast.success('Video draft generated!');
       logger.info('HomePage', 'Navigating to editor');
+      setProgressOpen(false);
       router.push('/editor');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Generation failed';
       logger.error('HomePage', 'Generation error', { error: message, stack: (err as Error).stack });
+
+      // Mark current step as error
+      if (currentStepId) {
+        updateStepStatus(currentStepId, 'error', message);
+      }
+
       toast.error(message);
+
+      // Keep dialog open for 3 seconds to show error, then close
+      setTimeout(() => {
+        setProgressOpen(false);
+      }, 3000);
     } finally {
       logger.info('HomePage', 'Generation completed');
       setIsGenerating(false);
-      setStatusMessage(undefined);
     }
   };
 
@@ -289,7 +412,6 @@ export default function HomePage() {
         <PromptInput
           onGenerate={handleGenerate}
           isGenerating={isGenerating}
-          statusMessage={statusMessage}
           onSettingsClick={() => setSettingsOpen(true)}
         />
 
@@ -314,6 +436,12 @@ export default function HomePage() {
         onWebsiteUrlChange={setWebsiteUrl}
         agenticMode={agenticMode}
         onAgenticModeChange={setAgenticMode}
+      />
+
+      <GenerationProgressDialog
+        open={progressOpen}
+        steps={progressSteps}
+        currentStep={currentStepId}
       />
     </div>
   );
