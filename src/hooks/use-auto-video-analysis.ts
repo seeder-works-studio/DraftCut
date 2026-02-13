@@ -6,7 +6,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { analyzeVideoWithFrameSampling, type SmartVideoAnalysis } from '@/lib/ai/smart-video-analysis';
-import { getApiKey } from '@/lib/storage/api-keys';
+import { loadAPIKey } from '@/lib/storage/api-keys';
 import { useProjectStore } from '@/stores/project-store';
 import type { VideoAnalysisSummary } from '@/lib/spec/types';
 
@@ -16,7 +16,7 @@ export function useAutoVideoAnalysis() {
   const analyzeVideo = useCallback(
     async (file: File, assetId: string) => {
       // Check if Gemini API key is available
-      const geminiKey = await getApiKey('gemini-video');
+      const geminiKey = await loadAPIKey('gemini-video');
       if (!geminiKey) {
         console.log('No Gemini API key - skipping video analysis');
         return;
