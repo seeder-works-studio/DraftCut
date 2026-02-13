@@ -198,6 +198,19 @@ export async function generateVideoSpec(
 
     logger.info('VideoGeneration', 'Validating project spec');
     const validatedSpec = validateProjectSpec(spec);
+
+    // Log detailed clip information for debugging
+    const allClips = validatedSpec.composition?.tracks?.flatMap(t => t.clips || []) || [];
+    logger.debug('VideoGeneration', 'Generated clips details', {
+      clips: allClips.map(c => ({
+        id: c.id,
+        type: c.type,
+        skillType: c.skillType,
+        assetId: c.assetId,
+        hasAssetId: !!c.assetId,
+      })),
+    });
+
     logger.info('VideoGeneration', 'Project spec validated successfully', {
       duration: validatedSpec.canvas?.duration,
       trackCount: validatedSpec.composition?.tracks?.length || 0,
