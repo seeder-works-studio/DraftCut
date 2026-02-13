@@ -439,11 +439,15 @@ export function isMusicGenerationRequest(message: string): boolean {
     'background music',
     'bgm',
     'soundtrack',
+    'sound track', // Two words version
     'audio track',
+    'background audio',
     'musical',
     'instrumental',
     'beat',
     'song',
+    'theme music',
+    'theme song',
   ];
 
   const lowerMessage = message.toLowerCase();
