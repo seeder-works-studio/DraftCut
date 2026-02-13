@@ -1,15 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Toolbar } from '@/components/editor/toolbar';
 import { Preview } from '@/components/editor/preview';
 import { Timeline } from '@/components/editor/timeline';
 import { ChatPanel } from '@/components/editor/chat-panel';
-import { ExportDialog } from '@/components/editor/export-dialog';
 import { useProjectStore } from '@/stores/project-store';
 import { useAutosave } from '@/hooks/use-autosave';
 import { useAssetLoader } from '@/hooks/use-asset-loader';
+
+// Lazy load export dialog to avoid SSR issues with Diffusion Studios
+const ExportDialog = dynamic(
+  () => import('@/components/editor/export-dialog').then(mod => ({ default: mod.ExportDialog })),
+  { ssr: false }
+);
 
 export default function EditorPage() {
   const router = useRouter();
