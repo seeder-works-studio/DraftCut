@@ -12,6 +12,26 @@ export function Preview() {
   const assetBlobUrls = useProjectStore((s) => s.assetBlobUrls);
   const currentTime = useEditorStore((s) => s.currentTime);
   const isPlaying = useEditorStore((s) => s.isPlaying);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ width: 1200, height: 800 });
+
+  // Measure container size
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        // Reserve some padding
+        setContainerSize({
+          width: width - 80,
+          height: height - 80
+        });
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   // Find active clips at current time for each track type
   const { activeVideoClip, activeImageClips, activeSkills, activeAudioClips } =
@@ -55,13 +75,14 @@ export function Preview() {
     );
   }
 
+  // Calculate scale to fit container while maintaining aspect ratio
   const scale = Math.min(
     1,
-    Math.min(400 / spec.canvas.width, 700 / spec.canvas.height)
+    Math.min(containerSize.width / spec.canvas.width, containerSize.height / spec.canvas.height)
   );
 
   return (
-    <div className="flex items-center justify-center h-full bg-black p-4 overflow-hidden">
+    <div ref={containerRef} className="flex items-center justify-center h-full bg-black p-4 overflow-hidden">
       <div
         className="relative"
         style={{
