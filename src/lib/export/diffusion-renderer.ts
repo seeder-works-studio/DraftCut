@@ -34,6 +34,37 @@ const QUALITY_PRESETS = {
 };
 
 /**
+ * Convert any color format to hex (Diffusion Studios only supports hex)
+ */
+function normalizeColorToHex(color: string): `#${string}` {
+  // Already hex
+  if (color.startsWith('#')) {
+    return color as `#${string}`;
+  }
+
+  // Named colors
+  if (color === 'transparent') {
+    return '#000000'; // Use black for transparent
+  }
+
+  // LAB, RGB, HSL, etc - convert using canvas
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const imageData = ctx.getImageData(0, 0, 1, 1);
+    const [r, g, b] = imageData.data;
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}` as `#${string}`;
+  } catch {
+    // Fallback to black if conversion fails
+    return '#000000';
+  }
+}
+
+/**
  * Export video using Diffusion Studios with hardware acceleration
  */
 export async function exportWithDiffusionStudios(
@@ -54,7 +85,7 @@ export async function exportWithDiffusionStudios(
   const composition = new core.Composition({
     width: spec.canvas.width,
     height: spec.canvas.height,
-    background: (spec.canvas.backgroundColor || '#000000') as `#${string}`,
+    background: normalizeColorToHex(spec.canvas.backgroundColor || '#000000'),
   });
 
   // Process tracks and add clips
