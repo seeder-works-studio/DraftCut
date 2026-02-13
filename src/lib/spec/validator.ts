@@ -96,8 +96,8 @@ export function validateProjectSpec(data: unknown): ProjectSpec {
   } catch (error) {
     if (error instanceof z.ZodError) {
       logger.error('Validator', 'ProjectSpec validation failed', {
-        errorCount: error.errors.length,
-        errors: error.errors.map((e) => ({
+        errorCount: error.issues.length,
+        errors: error.issues.map((e) => ({
           path: e.path.join('.'),
           message: e.message,
           code: e.code,
