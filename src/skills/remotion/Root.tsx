@@ -5,6 +5,13 @@ import { CaptionsPop } from '../CaptionsPop';
 import { CalloutBoxArrow } from '../CalloutBoxArrow';
 import { IntroTitleCard } from '../IntroTitleCard';
 import { OutroCTA } from '../OutroCTA';
+import { ImageSlideshow } from '../ImageSlideshow';
+import { TextReveal } from '../TextReveal';
+import { TerminalWindow } from '../TerminalWindow';
+import { KineticTypography } from '../KineticTypography';
+import { BrandLogo } from '../BrandLogo';
+import { CountUpNumber } from '../CountUpNumber';
+import { ProgressBar } from '../ProgressBar';
 import { SKILL_REGISTRY } from '../registry';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,6 +64,69 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={SKILL_REGISTRY.OutroCTA.defaultProps}
+      />
+      <C
+        id="ImageSlideshow"
+        component={ImageSlideshow}
+        durationInFrames={450}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={SKILL_REGISTRY.ImageSlideshow.defaultProps}
+      />
+      <C
+        id="TextReveal"
+        component={TextReveal}
+        durationInFrames={150}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={SKILL_REGISTRY.TextReveal.defaultProps}
+      />
+      <C
+        id="TerminalWindow"
+        component={TerminalWindow}
+        durationInFrames={150}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={SKILL_REGISTRY.TerminalWindow.defaultProps}
+      />
+      <C
+        id="KineticTypography"
+        component={KineticTypography}
+        durationInFrames={240}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={SKILL_REGISTRY.KineticTypography.defaultProps}
+      />
+      <C
+        id="BrandLogo"
+        component={BrandLogo}
+        durationInFrames={90}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={SKILL_REGISTRY.BrandLogo.defaultProps}
+      />
+      <C
+        id="CountUpNumber"
+        component={CountUpNumber}
+        durationInFrames={90}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={SKILL_REGISTRY.CountUpNumber.defaultProps}
+      />
+      <C
+        id="ProgressBar"
+        component={ProgressBar}
+        durationInFrames={90}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={SKILL_REGISTRY.ProgressBar.defaultProps}
       />
     </>
   );
