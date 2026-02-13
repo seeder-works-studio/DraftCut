@@ -69,6 +69,7 @@ export function buildSystemPrompt(
     '6. ALWAYS include Intro -> Main content -> Outro structure',
     '7. Layer multiple animated skills for visual richness',
     '8. The "assets" array in output must ONLY contain assets from the AVAILABLE ASSETS list below. If no assets are listed, output "assets": []',
+    '9. CRITICAL: Use ONLY hex colors (e.g., "#8B5CF6"). NEVER use lab(), lch(), oklab(), or oklch() color functions - they are not supported.',
     '',
     'AVAILABLE ASSETS:',
     assetList,

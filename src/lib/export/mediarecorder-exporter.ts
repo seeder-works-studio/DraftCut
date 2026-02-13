@@ -21,23 +21,38 @@ function normalizeColorToHex(color: string): string {
   }
 
   // Named colors
-  if (color === 'transparent') {
+  if (color === 'transparent' || color === 'rgba(0, 0, 0, 0)' || color === 'rgba(0,0,0,0)') {
     return '#000000';
   }
 
-  // LAB, RGB, HSL, etc - convert using canvas
+  // LAB colors are not supported by Canvas API - convert to fallback
+  if (color.startsWith('lab(') || color.startsWith('lch(') || color.startsWith('oklab(') || color.startsWith('oklch(')) {
+    console.warn(`LAB color detected and converted to fallback: ${color}`);
+    return '#8B5CF6'; // Purple fallback (brand color)
+  }
+
+  // RGB, RGBA, HSL, etc - convert using canvas
   try {
     const canvas = document.createElement('canvas');
     canvas.width = 1;
     canvas.height = 1;
     const ctx = canvas.getContext('2d')!;
     ctx.fillStyle = color;
+
+    // Check if canvas accepted the color
+    if (ctx.fillStyle === '#000000' && color !== 'black' && !color.includes('0')) {
+      // Canvas rejected the color, use fallback
+      console.warn(`Color rejected by canvas, using fallback: ${color}`);
+      return '#8B5CF6';
+    }
+
     ctx.fillRect(0, 0, 1, 1);
     const imageData = ctx.getImageData(0, 0, 1, 1);
     const [r, g, b] = imageData.data;
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  } catch {
-    return '#000000';
+  } catch (err) {
+    console.warn(`Failed to convert color "${color}":`, err);
+    return '#8B5CF6'; // Fallback to brand purple
   }
 }
 

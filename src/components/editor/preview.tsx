@@ -286,7 +286,8 @@ function SkillOverlay({
 
   if (!skillDef) return null;
 
-  const relativeFrame = Math.floor((currentTime - clip.startTime) * fps);
+  // Clamp relativeFrame to prevent negative values that cause interpolate errors
+  const relativeFrame = Math.max(0, Math.floor((currentTime - clip.startTime) * fps));
   const durationInFrames = Math.ceil(clip.duration * fps);
 
   // Inject assetBlobUrls into skill props
