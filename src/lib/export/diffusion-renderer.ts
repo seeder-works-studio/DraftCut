@@ -3,9 +3,12 @@
  * Provides high-quality MP4 export using WebCodecs API
  */
 
-import * as core from '@diffusionstudio/core';
 import type { ProjectSpec, Clip } from '@/lib/spec/types';
 import { exportWithMediaRecorder } from './mediarecorder-exporter';
+import type * as DiffusionCore from '@diffusionstudio/core';
+
+// Dynamic import to avoid SSR issues with browser-only APIs
+let core: typeof DiffusionCore | null = null;
 
 export interface DiffusionExportOptions {
   quality?: 'low' | 'medium' | 'high' | 'ultra';
@@ -37,6 +40,11 @@ export async function exportWithDiffusionStudios(
   context: RenderContext,
   options: DiffusionExportOptions = {}
 ): Promise<Blob> {
+  // Lazy load Diffusion Studios only in browser
+  if (!core) {
+    core = await import('@diffusionstudio/core');
+  }
+
   const { spec, assetBlobUrls } = context;
   const quality = options.quality || 'high';
   const fps = options.fps || spec.canvas.fps;
@@ -105,7 +113,7 @@ export async function exportWithDiffusionStudios(
  * Add a clip to a Diffusion Studios layer
  */
 async function addClipToLayer(
-  layer: core.Layer,
+  layer: DiffusionCore.Layer,
   clip: Clip,
   assetBlobUrls: Record<string, string>,
   spec: ProjectSpec
@@ -127,10 +135,11 @@ async function addClipToLayer(
  * Add video clip to layer
  */
 async function addVideoClip(
-  layer: core.Layer,
+  layer: DiffusionCore.Layer,
   clip: Clip,
   assetBlobUrls: Record<string, string>
 ): Promise<void> {
+  if (!core) throw new Error('Diffusion Studios not loaded');
   if (!clip.assetId) return;
 
   const blobUrl = assetBlobUrls[clip.assetId];
@@ -140,7 +149,7 @@ async function addVideoClip(
   }
 
   // Create video source
-  const source = await core.Source.from<core.VideoSource>(blobUrl);
+  const source = await core.Source.from<DiffusionCore.VideoSource>(blobUrl);
 
   // Create video clip with trim range
   const videoClip = new core.VideoClip(source, {
@@ -168,10 +177,11 @@ async function addVideoClip(
  * Add audio clip to layer
  */
 async function addAudioClip(
-  layer: core.Layer,
+  layer: DiffusionCore.Layer,
   clip: Clip,
   assetBlobUrls: Record<string, string>
 ): Promise<void> {
+  if (!core) throw new Error('Diffusion Studios not loaded');
   if (!clip.assetId) return;
 
   const blobUrl = assetBlobUrls[clip.assetId];
@@ -181,7 +191,7 @@ async function addAudioClip(
   }
 
   // Create audio source
-  const source = await core.Source.from<core.AudioSource>(blobUrl);
+  const source = await core.Source.from<DiffusionCore.AudioSource>(blobUrl);
 
   // Create audio clip with trim range and volume
   const audioClip = new core.AudioClip(source, {
@@ -202,10 +212,11 @@ async function addAudioClip(
  * Add image clip to layer
  */
 async function addImageClip(
-  layer: core.Layer,
+  layer: DiffusionCore.Layer,
   clip: Clip,
   assetBlobUrls: Record<string, string>
 ): Promise<void> {
+  if (!core) throw new Error('Diffusion Studios not loaded');
   if (!clip.assetId) return;
 
   const blobUrl = assetBlobUrls[clip.assetId];
@@ -215,7 +226,7 @@ async function addImageClip(
   }
 
   // Create image source
-  const source = await core.Source.from<core.ImageSource>(blobUrl);
+  const source = await core.Source.from<DiffusionCore.ImageSource>(blobUrl);
 
   // Create image clip
   const imageClip = new core.ImageClip(source);
@@ -239,11 +250,13 @@ async function addImageClip(
  * Add skill clip to layer (pre-render Remotion skill to video)
  */
 async function addSkillClip(
-  layer: core.Layer,
+  layer: DiffusionCore.Layer,
   clip: Clip,
   spec: ProjectSpec,
   assetBlobUrls: Record<string, string>
 ): Promise<void> {
+  if (!core) throw new Error('Diffusion Studios not loaded');
+
   // Pre-render the Remotion skill to a video blob using MediaRecorder
   const skillBlob = await renderSkillToBlob(clip, spec, assetBlobUrls);
 
@@ -252,7 +265,7 @@ async function addSkillClip(
 
   try {
     // Create video source from the rendered skill
-    const source = await core.Source.from<core.VideoSource>(skillBlobUrl);
+    const source = await core.Source.from<DiffusionCore.VideoSource>(skillBlobUrl);
 
     // Create video clip for the skill
     const videoClip = new core.VideoClip(source);
