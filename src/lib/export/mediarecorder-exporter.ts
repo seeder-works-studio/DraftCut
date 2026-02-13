@@ -195,9 +195,13 @@ export async function exportWithMediaRecorder(
   context: ExportContext,
   options: MediaRecorderExportOptions = {}
 ): Promise<Blob> {
+  console.log('[MediaRecorder] Starting export...');
+
   // Sanitize all colors to hex format before export
   const spec = sanitizeSpecColors(context.spec);
   const { assetBlobUrls } = context;
+
+  console.log('[MediaRecorder] Spec sanitized, creating canvas...');
 
   const {
     quality = 'high',
@@ -213,6 +217,8 @@ export async function exportWithMediaRecorder(
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('Failed to get canvas context');
 
+  console.log('[MediaRecorder] Canvas created, setting up video stream...');
+
   // Set up video stream
   const stream = canvas.captureStream(spec.canvas.fps);
 
@@ -221,6 +227,8 @@ export async function exportWithMediaRecorder(
   if (audioTrack) {
     stream.addTrack(audioTrack);
   }
+
+  console.log('[MediaRecorder] Video stream ready, starting MediaRecorder...');
 
   // Set up MediaRecorder
   const mimeType = getSupportedMimeType();
@@ -243,8 +251,13 @@ export async function exportWithMediaRecorder(
   // Calculate total frames
   const totalFrames = Math.ceil(spec.canvas.duration * spec.canvas.fps);
 
+  console.log('[MediaRecorder] Preloading media elements...');
+
   // Pre-load all video and image elements
   const mediaElements = await preloadMediaElements(spec, assetBlobUrls);
+
+  console.log('[MediaRecorder] Media elements loaded, starting frame rendering...');
+  console.log('[MediaRecorder] Total frames to render:', totalFrames);
 
   // Render each frame
   for (let frame = 0; frame < totalFrames; frame++) {
@@ -565,6 +578,8 @@ async function renderSkillClip(
   assetBlobUrls: Record<string, string>
 ): Promise<void> {
   if (!clip.skillType || !clip.skillProps) return;
+
+  console.log(`[MediaRecorder] Rendering skill clip: ${clip.skillType}`);
 
   const skillDef = SKILL_REGISTRY[clip.skillType];
   if (!skillDef) return;
