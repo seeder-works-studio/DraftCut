@@ -277,9 +277,14 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
             {exportMethod === 'diffusion' && (
               <div className="text-xs space-y-1">
                 {diffusionSupported ? (
-                  <p className="text-green-600 dark:text-green-400">
-                    ✓ Hardware-accelerated export available
-                  </p>
+                  <div className="space-y-1">
+                    <p className="text-amber-600 dark:text-amber-400">
+                      ⚠️ MP4 export is experimental and may have color compatibility issues
+                    </p>
+                    <p className="text-muted-foreground">
+                      For best results, use WebM export instead. MP4 export with Diffusion Studios is still in development.
+                    </p>
+                  </div>
                 ) : (
                   <div className="text-amber-600 dark:text-amber-400 space-y-1">
                     <p>⚠️ Diffusion Studios requires:</p>

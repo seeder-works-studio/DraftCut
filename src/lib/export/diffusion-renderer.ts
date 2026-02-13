@@ -140,15 +140,59 @@ function sanitizeObjectColors(obj: any): any {
 }
 
 /**
+ * Find all LAB colors in an object (for debugging)
+ */
+function findLabColors(obj: any, path: string = 'root'): string[] {
+  const found: string[] = [];
+
+  if (typeof obj === 'string') {
+    if (obj.startsWith('lab(') || obj.startsWith('lch(') ||
+        obj.startsWith('oklab(') || obj.startsWith('oklch(')) {
+      found.push(`${path}: "${obj}"`);
+    }
+    return found;
+  }
+
+  if (Array.isArray(obj)) {
+    obj.forEach((item, idx) => {
+      found.push(...findLabColors(item, `${path}[${idx}]`));
+    });
+    return found;
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    for (const [key, value] of Object.entries(obj)) {
+      found.push(...findLabColors(value, `${path}.${key}`));
+    }
+  }
+
+  return found;
+}
+
+/**
  * Sanitize all colors in the spec to hex format
  */
 function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
   console.log('Sanitizing spec colors...');
 
+  // Check for LAB colors before sanitization
+  const labColorsBefore = findLabColors(spec);
+  if (labColorsBefore.length > 0) {
+    console.warn('Found LAB colors BEFORE sanitization:', labColorsBefore);
+  }
+
   // Deep clone and sanitize recursively
   const sanitized = sanitizeObjectColors(JSON.parse(JSON.stringify(spec))) as ProjectSpec;
 
-  console.log('Color sanitization complete');
+  // Verify no LAB colors remain after sanitization
+  const labColorsAfter = findLabColors(sanitized);
+  if (labColorsAfter.length > 0) {
+    console.error('❌ LAB colors still present AFTER sanitization:', labColorsAfter);
+    console.error('This is a bug in the sanitization logic!');
+  } else {
+    console.log('✓ Color sanitization complete - no LAB colors found');
+  }
+
   return sanitized;
 }
 
@@ -167,17 +211,22 @@ export async function exportWithDiffusionStudios(
   const { assetBlobUrls } = context;
 
   // Sanitize all colors in spec to hex format (Diffusion Studios requirement)
+  console.log('Original spec before sanitization:', JSON.stringify(context.spec, null, 2));
   const spec = sanitizeSpecColors(context.spec);
+  console.log('Sanitized spec after sanitization:', JSON.stringify(spec, null, 2));
 
   const quality = options.quality || 'high';
   const fps = options.fps || spec.canvas.fps;
   const resolution = options.resolution || 1;
 
-  // Create composition
+  // Create composition with explicit hex background
+  const bgColor = normalizeColorToHex(spec.canvas.backgroundColor || '#000000');
+  console.log('Creating Diffusion Studios composition with background:', bgColor);
+
   const composition = new core.Composition({
     width: spec.canvas.width,
     height: spec.canvas.height,
-    background: normalizeColorToHex(spec.canvas.backgroundColor || '#000000'),
+    background: bgColor,
   });
 
   // Process tracks and add clips
@@ -217,8 +266,19 @@ export async function exportWithDiffusionStudios(
     };
   }
 
-  // Render to blob
-  const result = await encoder.render();
+  // Render to blob with error handling
+  let result;
+  try {
+    result = await encoder.render();
+  } catch (err) {
+    // Check if this is a LAB color error
+    if (err instanceof Error && err.message.includes('lab')) {
+      console.error('Diffusion Studios LAB color error - this may be from CSS inheritance');
+      console.error('Sanitized spec:', JSON.stringify(spec, null, 2));
+      throw new Error('Export failed: Unsupported color format detected. Please ensure all colors in your project are hex colors (e.g., #FF0000). LAB/OKLCH colors from CSS are not supported.');
+    }
+    throw err;
+  }
 
   if (result.type === 'success' && result.data) {
     return result.data;
@@ -427,6 +487,7 @@ async function renderSkillToBlob(
   assetBlobUrls: Record<string, string>
 ): Promise<Blob> {
   // Create a minimal spec containing just this skill clip
+  // IMPORTANT: spec is already sanitized, so skillSpec will be too
   const skillSpec: ProjectSpec = {
     ...spec,
     composition: {
@@ -439,6 +500,9 @@ async function renderSkillToBlob(
       ],
     },
   };
+
+  console.log('Rendering skill to blob:', clip.skillType);
+  console.log('Skill props:', JSON.stringify(clip.skillProps, null, 2));
 
   // Use existing MediaRecorder exporter to render the skill
   return await exportWithMediaRecorder(
