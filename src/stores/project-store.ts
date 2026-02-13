@@ -12,6 +12,7 @@ interface ProjectState {
   updateSpec: (updater: (spec: ProjectSpec) => ProjectSpec) => void;
   setAssets: (assets: Asset[]) => void;
   addAsset: (asset: Asset) => void;
+  updateAsset: (id: string, updates: Partial<Asset>) => void;
   removeAsset: (id: string) => void;
   setIsGenerating: (generating: boolean) => void;
   setAssetBlobUrl: (assetId: string, url: string) => void;
@@ -65,6 +66,31 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       filename: asset.filename,
     });
     set((state) => ({ assets: [...state.assets, asset] }));
+  },
+
+  updateAsset: (id, updates) => {
+    logger.info('ProjectStore', 'Updating asset', {
+      assetId: id,
+      updates: Object.keys(updates),
+    });
+    set((state) => ({
+      assets: state.assets.map((asset) =>
+        asset.id === id ? { ...asset, ...updates } : asset
+      ),
+    }));
+
+    // Also update in spec.assets if spec exists
+    const spec = get().spec;
+    if (spec) {
+      set({
+        spec: {
+          ...spec,
+          assets: spec.assets.map((asset) =>
+            asset.id === id ? { ...asset, ...updates } : asset
+          ),
+        },
+      });
+    }
   },
 
   removeAsset: (id) => {

@@ -34,6 +34,35 @@ export interface Asset {
   height?: number;
   storageKey?: string;
   colors?: string[]; // Dominant colors extracted from image (hex format)
+
+  // Video analysis (auto-generated for video assets)
+  videoAnalysis?: VideoAnalysisSummary;
+}
+
+export interface VideoAnalysisSummary {
+  analyzed: boolean;
+  analyzedAt: string;
+
+  // Quick summary for AI prompts
+  totalScenes: number;
+  bestMomentsCount: number;
+  suggestedClipsCount: number;
+  overallTone: string;
+  topSubjects: string[];
+
+  // Detailed clip suggestions
+  suggestedClips: Array<{
+    startTime: number;
+    endTime: number;
+    reason: string;
+    interestScore: number;
+  }>;
+
+  // Best moments for highlights
+  bestMoments: Array<{
+    timestamp: number;
+    reason: string;
+  }>;
 }
 
 export interface Track {
