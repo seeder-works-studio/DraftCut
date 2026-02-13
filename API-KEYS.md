@@ -16,7 +16,8 @@ All keys are stored locally in your browser (IndexedDB). Nothing is sent to any 
 
 | Service | Get Key | Used For |
 |---------|---------|----------|
-| **Pixabay** | https://pixabay.com/api/docs/ | **Stock music & sound effects (recommended - instant & free)** |
+| **Jamendo** | https://developer.jamendo.com/v3.0 | **Free stock music (recommended - instant & free, Client ID only)** |
+| Pixabay | https://pixabay.com/api/docs/ | Stock images, videos & sound effects |
 | ElevenLabs | https://elevenlabs.io/app/settings/api-keys | Voice narration & AI sound effects |
 | Replicate | https://replicate.com/account/api-tokens | AI music generation (slow, generative) |
 | FAL.ai | https://fal.ai/dashboard/keys | Fast AI inference (image/video) |

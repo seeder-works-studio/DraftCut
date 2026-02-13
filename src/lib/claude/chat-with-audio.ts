@@ -13,7 +13,8 @@ import {
 } from '@/lib/ai/elevenlabs';
 import { generateMusic } from '@/lib/ai/music';
 import { generateMusicBeatoven } from '@/lib/ai/beatoven';
-import { getPixabayMusic, getPixabaySoundEffect } from '@/lib/ai/pixabay';
+import { getPixabaySoundEffect } from '@/lib/ai/pixabay';
+import { getJamendoMusic } from '@/lib/ai/jamendo';
 import { saveAsset } from '@/lib/storage/assets';
 import type { Asset, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
@@ -206,8 +207,8 @@ export async function chatEditSpecWithAudio(
   if (isMusicRequest) {
     console.log('[Music] Request detected');
 
-    // Try Pixabay first (instant), then generative AI (slow)
-    const pixabayKey = await loadAPIKey('pixabay');
+    // Try Jamendo first (instant, free), then generative AI (slow, paid)
+    const jamendoKey = await loadAPIKey('jamendo');
     const beatovenKey = await loadAPIKey('beatoven');
     const replicateKey = await loadAPIKey('replicate');
 
@@ -217,13 +218,13 @@ export async function chatEditSpecWithAudio(
     const durationMatch = lastUserMessage.match(/(\d+)\s*(?:second|sec|s)/i);
     const duration = durationMatch ? parseInt(durationMatch[1]) : undefined;
 
-    // Try Pixabay first (instant search)
-    if (pixabayKey) {
+    // Try Jamendo first (instant, free stock music)
+    if (jamendoKey) {
       try {
-        console.log('[Pixabay] Searching for music:', musicDescription);
-        const { blob, metadata } = await getPixabayMusic(musicDescription, pixabayKey, duration);
+        console.log('[Jamendo] Searching for music:', musicDescription);
+        const { blob, metadata } = await getJamendoMusic(musicDescription, jamendoKey, duration);
 
-        const filename = `pixabay-music-${metadata.id}.mp3`;
+        const filename = `jamendo-${metadata.id}.mp3`;
         const audioFile = new File([blob], filename, { type: 'audio/mpeg' });
         const asset = await saveAsset(audioFile);
         const blobUrl = URL.createObjectURL(audioFile);
@@ -236,14 +237,14 @@ export async function chatEditSpecWithAudio(
           {
             id: `system-${Date.now()}`,
             role: 'assistant',
-            content: `Music found on Pixabay and saved as asset "${asset.id}" (${metadata.tags}, ${metadata.duration}s). You can now add this music to an audio track in the video spec.`,
+            content: `Music found on Jamendo: "${metadata.name}" by ${metadata.artist_name} (${metadata.duration}s) - saved as asset "${asset.id}". You can now add this music to an audio track in the video spec.`,
             timestamp: Date.now(),
           },
         ];
 
-        console.log('[Pixabay] Music retrieved successfully');
-      } catch (pixabayError) {
-        console.log('[Pixabay] Failed, trying generative AI fallback');
+        console.log('[Jamendo] Music retrieved successfully');
+      } catch (jamendoError) {
+        console.log('[Jamendo] Failed, trying generative AI fallback:', jamendoError);
 
         // Fallback to generative AI (Beatoven or Replicate)
         if (beatovenKey || replicateKey) {
