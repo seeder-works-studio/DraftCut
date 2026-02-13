@@ -203,8 +203,12 @@ export async function exportWithDiffusionStudios(
   context: RenderContext,
   options: DiffusionExportOptions = {}
 ): Promise<Blob> {
+  console.warn('⚠️ USING DIFFUSION STUDIOS EXPORT (EXPERIMENTAL - LAB COLOR ISSUES KNOWN)');
+  console.warn('For better results, use WebM export instead');
+
   // Lazy load Diffusion Studios only in browser
   if (!core) {
+    console.log('Lazy loading Diffusion Studios library...');
     core = await import('@diffusionstudio/core');
   }
 

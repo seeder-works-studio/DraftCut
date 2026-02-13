@@ -59,11 +59,12 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     setDiffusionSupported(diffusion);
     setMediaRecorderSupported(mediaRecorder);
 
-    // Default to best available method
-    if (diffusion) {
-      setExportMethod('diffusion');
-    } else if (mediaRecorder) {
+    // Default to WebM (most reliable) instead of Diffusion Studios (experimental)
+    // Diffusion Studios has LAB color compatibility issues
+    if (mediaRecorder) {
       setExportMethod('webm');
+    } else if (diffusion) {
+      setExportMethod('diffusion');
     } else {
       setExportMethod('json');
     }
@@ -122,8 +123,11 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       console.log('All assets loaded successfully:', Object.keys(loadedBlobUrls));
 
       try {
+      console.log('Export method selected:', exportMethod);
+
       if (exportMethod === 'webm' && mediaRecorderSupported) {
         // Export with MediaRecorder (WebM, browser-based)
+        console.log('Starting WebM export with MediaRecorder API');
         toast.info('Starting WebM export (YouTube-compatible)...');
 
         const videoBlob = await exportWithMediaRecorder(
@@ -146,6 +150,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         onOpenChange(false);
       } else if (exportMethod === 'diffusion' && diffusionSupported) {
         // Export with Diffusion Studios (MP4, hardware-accelerated)
+        console.log('Starting MP4 export with Diffusion Studios');
         toast.info('Starting MP4 export with hardware acceleration...');
 
         const videoBlob = await exportWithDiffusionStudios(
