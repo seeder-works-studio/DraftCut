@@ -605,7 +605,7 @@ async function renderRemotionSkillToCanvas(
   if (!skillDef) return;
 
   // Create hidden container for rendering
-  // CRITICAL: Isolate from page CSS to avoid OKLCH color inheritance
+  // CRITICAL: Override CSS variables to prevent OKLCH color inheritance from globals.css
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.left = '-9999px';
@@ -615,24 +615,34 @@ async function renderRemotionSkillToCanvas(
   container.style.overflow = 'hidden';
   container.style.backgroundColor = spec.canvas.backgroundColor || '#000000';
 
-  // Reset all CSS variables to prevent OKLCH inheritance
-  container.style.cssText += `
-    --background: #ffffff;
-    --foreground: #000000;
-    --primary: #000000;
-    --secondary: #ffffff;
-    --accent: #3b82f6;
-    --muted: #f3f4f6;
-    --destructive: #ef4444;
+  // Add inline style to override ALL CSS variables with hex colors
+  // This prevents html2canvas from encountering OKLCH colors
+  const styleOverride = document.createElement('style');
+  styleOverride.textContent = `
+    .remotion-export-container,
+    .remotion-export-container * {
+      --background: #ffffff !important;
+      --foreground: #000000 !important;
+      --card: #ffffff !important;
+      --card-foreground: #000000 !important;
+      --popover: #ffffff !important;
+      --popover-foreground: #000000 !important;
+      --primary: #000000 !important;
+      --primary-foreground: #ffffff !important;
+      --secondary: #f5f5f5 !important;
+      --secondary-foreground: #000000 !important;
+      --muted: #f5f5f5 !important;
+      --muted-foreground: #737373 !important;
+      --accent: #3b82f6 !important;
+      --accent-foreground: #000000 !important;
+      --destructive: #ef4444 !important;
+      --border: #e5e5e5 !important;
+      --input: #e5e5e5 !important;
+      --ring: #737373 !important;
+    }
   `;
-
-  // Isolate from parent styles
-  container.style.all = 'initial';
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  container.style.width = `${spec.canvas.width}px`;
-  container.style.height = `${spec.canvas.height}px`;
+  container.appendChild(styleOverride);
+  container.classList.add('remotion-export-container');
 
   document.body.appendChild(container);
 

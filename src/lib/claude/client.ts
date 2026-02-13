@@ -83,6 +83,17 @@ export async function generateVideoSpec(
   agenticMode?: AgenticModeConfig,
   onProgress?: (message: string) => void
 ): Promise<ProjectSpec> {
+  console.log('\n' + '🎬'.repeat(30));
+  console.log('🎬 STARTING VIDEO GENERATION');
+  console.log('🎬'.repeat(30));
+  console.log('📝 Prompt:', userPrompt.substring(0, 100) + (userPrompt.length > 100 ? '...' : ''));
+  console.log('🤖 Provider:', config.provider);
+  console.log('📦 Uploaded assets:', assets.length);
+  assets.forEach((a, i) => {
+    console.log(`   ${i + 1}. ${a.type}: ${a.filename} (id: ${a.id})`);
+  });
+  console.log('='.repeat(60) + '\n');
+
   logger.info('VideoGeneration', 'Starting video spec generation', {
     provider: config.provider,
     model: config.model,
@@ -296,6 +307,11 @@ export async function generateVideoSpec(
 
     // Post-generation validation and auto-fix
     const availableAssetIds = new Set(assets.map((a) => a.id));
+
+    console.log('\n' + '='.repeat(60));
+    console.log('🎬 VIDEO GENERATION COMPLETE - STARTING VALIDATION');
+    console.log('='.repeat(60));
+
     logger.info('VideoGeneration', 'Running post-generation validation', {
       availableAssets: Array.from(availableAssetIds),
     });
@@ -303,6 +319,10 @@ export async function generateVideoSpec(
 
     const validationResult = validateAndFixSpec(validatedSpec, availableAssetIds);
     const validationReport = formatValidationReport(validationResult);
+
+    console.log('\n📋 VALIDATION REPORT:');
+    console.log(validationReport);
+    console.log('='.repeat(60) + '\n');
 
     if (validationResult.issues.length > 0) {
       logger.warn('VideoGeneration', 'Validation issues found', {

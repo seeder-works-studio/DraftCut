@@ -29,6 +29,11 @@ export function validateAndFixSpec(
   spec: ProjectSpec,
   availableAssets: Set<string>
 ): ValidationResult {
+  console.group('🔍 POST-GENERATION VALIDATION');
+  console.log('📊 Available assets:', Array.from(availableAssets));
+  console.log('📊 Spec assets:', spec.assets.map(a => a.id));
+  console.log('📊 Track count:', spec.composition.tracks.length);
+
   const issues: ValidationIssue[] = [];
   let fixedSpec = JSON.parse(JSON.stringify(spec)) as ProjectSpec;
   let autoFixed = false;
@@ -207,12 +212,36 @@ export function validateAndFixSpec(
 
   const valid = issues.filter((i) => i.severity === 'error').length === 0;
 
+  // Log results
+  const errors = issues.filter((i) => i.severity === 'error');
+  const warnings = issues.filter((i) => i.severity === 'warning');
+
+  console.log('📋 Validation Results:');
+  console.log(`   ✅ Valid: ${valid}`);
+  console.log(`   ❌ Errors: ${errors.length}`);
+  console.log(`   ⚠️  Warnings: ${warnings.length}`);
+  console.log(`   🔧 Auto-fixed: ${autoFixed}`);
+
+  if (errors.length > 0) {
+    console.group('❌ ERRORS FOUND:');
+    errors.forEach(e => console.error(`   • ${e.message}`));
+    console.groupEnd();
+  }
+
+  if (warnings.length > 0) {
+    console.group('⚠️  WARNINGS:');
+    warnings.forEach(w => console.warn(`   • ${w.message}`));
+    console.groupEnd();
+  }
+
+  console.groupEnd(); // End validation group
+
   logger.info('PostGenValidation', 'Validation complete', {
     valid,
     issueCount: issues.length,
     autoFixed,
-    errors: issues.filter((i) => i.severity === 'error').length,
-    warnings: issues.filter((i) => i.severity === 'warning').length,
+    errors: errors.length,
+    warnings: warnings.length,
   });
 
   return {

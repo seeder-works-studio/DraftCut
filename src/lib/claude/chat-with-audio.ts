@@ -205,14 +205,21 @@ export async function chatEditSpecWithAudio(
 
   // Generate music if requested
   if (isMusicRequest) {
-    console.log('[Music] Request detected');
+    console.group('🎵 MUSIC GENERATION REQUEST');
+    console.log('📝 User message:', lastUserMessage);
 
     // Try Jamendo first (instant, free), then generative AI (slow, paid)
     const jamendoKey = await loadAPIKey('jamendo');
     const beatovenKey = await loadAPIKey('beatoven');
     const replicateKey = await loadAPIKey('replicate');
 
+    console.log('🔑 Available API keys:');
+    console.log('   • Jamendo:', jamendoKey ? '✅' : '❌');
+    console.log('   • Beatoven:', beatovenKey ? '✅' : '❌');
+    console.log('   • Replicate:', replicateKey ? '✅' : '❌');
+
     const musicDescription = extractMusicDescription(lastUserMessage);
+    console.log('🎼 Music description:', musicDescription);
 
     // Extract duration if specified
     const durationMatch = lastUserMessage.match(/(\d+)\s*(?:second|sec|s)/i);
@@ -242,9 +249,11 @@ export async function chatEditSpecWithAudio(
           },
         ];
 
-        console.log('[Jamendo] Music retrieved successfully');
+        console.log('✅ [Jamendo] Music retrieved successfully');
+        console.groupEnd(); // End music generation group
       } catch (jamendoError) {
-        console.log('[Jamendo] Failed, trying generative AI fallback:', jamendoError);
+        console.error('❌ [Jamendo] Failed:', jamendoError);
+        console.log('🔄 Trying generative AI fallback...');
 
         // Fallback to generative AI (Beatoven or Replicate)
         if (beatovenKey || replicateKey) {
@@ -286,9 +295,11 @@ export async function chatEditSpecWithAudio(
               },
             ];
 
-            console.log(`[${provider}] Music generated successfully`);
+            console.log(`✅ [${provider}] Music generated successfully`);
+            console.groupEnd(); // End music generation group
           } catch (error) {
-            console.error('[Music] All providers failed:', error);
+            console.error('❌ [Music] All providers failed:', error);
+            console.groupEnd(); // End music generation group
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
             messages = [
