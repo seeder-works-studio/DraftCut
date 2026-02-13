@@ -6,7 +6,8 @@ function formatAssets(assets: Asset[]): string {
     .map((a) => {
       const dur = a.duration ? `${a.duration}s` : '';
       const dims = a.width && a.height ? `${a.width}x${a.height}` : '';
-      return `- ${a.id}: ${a.type} "${a.filename}" ${dur} ${dims}`.trim();
+      const colors = a.colors && a.colors.length > 0 ? `colors: [${a.colors.join(', ')}]` : '';
+      return `- ${a.id}: ${a.type} "${a.filename}" ${dur} ${dims} ${colors}`.trim();
     })
     .join('\n');
 }
@@ -80,6 +81,16 @@ export function buildSystemPrompt(
     'BRAND KIT:',
     brandKitInfo,
     '',
+    'ASSET COLOR ANALYSIS (CRITICAL FOR LOGO PLACEMENT):',
+    '- Each image asset includes extracted dominant colors in hex format (see "colors" field above)',
+    '- NEVER use similar colors for logo and background (e.g., black logo on black background)',
+    '- If logo has DARK colors (#000000, #1a1a1a, dark blues/grays), use LIGHT backgrounds (#ffffff, #f5f5f5, #e5e5e5)',
+    '- If logo has LIGHT colors (#ffffff, #f0f0f0, light yellows/blues), use DARK backgrounds (#1a1a1a, #0a0e27, #1e293b)',
+    '- If logo has COLORFUL colors (red, blue, green, etc.), use neutral backgrounds (white or dark gray)',
+    '- Check the asset\'s "colors" array to determine if logo is light/dark before choosing background',
+    '- Example: If asset shows "colors: [#000000, #333333]" (dark), use backgroundColor: "#ffffff"',
+    '- Example: If asset shows "colors: [#ffffff, #f4c542]" (light), use backgroundColor: "#1a1a1a"',
+    '',
     'AVAILABLE SKILLS (All fully supported with export rendering):',
     '',
     '1. ImageSlideshow: ANIMATED image slideshow with Ken Burns effects',
@@ -93,10 +104,12 @@ export function buildSystemPrompt(
     '3. IntroTitleCard: Animated full-screen title card with bouncing logo and sliding text',
     '   Props: { title: string, subtitle?: string, logoAssetId?: string, backgroundColor, titleColor, subtitleColor, accentColor }',
     '   Has built-in entrance animations with large, bold typography (108px title, 56px subtitle), accent bars, and corner decorations. Use at video start (0-3s).',
+    '   ⚠️ CRITICAL: If using logoAssetId, check the logo\'s colors in assets list and choose CONTRASTING backgroundColor!',
     '',
     '4. OutroCTA: Animated call-to-action with pulsing button and shimmer effect',
     '   Props: { heading: string, ctaText: string, url?: string, logoAssetId?: string, backgroundColor, textColor, buttonColor, buttonTextColor }',
     '   Has built-in button pulse, glow effects, large prominent text (84px heading, 42px button), and animated decorations. Use at video end (last 5-7s).',
+    '   ⚠️ CRITICAL: If using logoAssetId, check the logo\'s colors and choose CONTRASTING backgroundColor!',
     '',
     '5. CaptionsPop: Animated captions with word-by-word pop effect',
     '   Props: { captions: [{ text, startTime, duration, emphasizedWords?: number[] }], fontSize (default: 64), fontFamily, color, backgroundColor, position: "top"|"center"|"bottom" }',

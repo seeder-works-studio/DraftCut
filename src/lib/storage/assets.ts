@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDB } from './db';
 import type { Asset } from '@/lib/spec/types';
+import { extractImageColors } from '@/lib/utils/color-extraction';
 
 function detectAssetType(mimeType: string): 'video' | 'audio' | 'image' {
   if (mimeType.startsWith('video/')) return 'video';
@@ -66,6 +67,16 @@ export async function saveAsset(file: File): Promise<Asset> {
     const dims = await getMediaDimensions(file);
     metadata.width = dims.width;
     metadata.height = dims.height;
+  }
+
+  // Extract dominant colors from images
+  if (metadata.type === 'image') {
+    try {
+      metadata.colors = await extractImageColors(file);
+    } catch (error) {
+      console.warn('Failed to extract image colors:', error);
+      metadata.colors = [];
+    }
   }
 
   await db.put('assets', { id, blob: file, metadata });

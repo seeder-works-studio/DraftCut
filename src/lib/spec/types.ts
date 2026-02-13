@@ -33,6 +33,7 @@ export interface Asset {
   width?: number;
   height?: number;
   storageKey?: string;
+  colors?: string[]; // Dominant colors extracted from image (hex format)
 }
 
 export interface Track {
