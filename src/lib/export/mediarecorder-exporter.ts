@@ -712,15 +712,63 @@ async function renderRemotionSkillToCanvas(
     // Capture rendered content to canvas using html2canvas
     // Use explicit hex background to avoid CSS color parsing
     const bgColor = spec.canvas.backgroundColor || '#000000';
-    const capturedCanvas = await html2canvas(container, {
-      width: spec.canvas.width,
-      height: spec.canvas.height,
-      backgroundColor: bgColor,
-      logging: false,
-      scale: 1,
-      foreignObjectRendering: false, // Disable foreign object to avoid CSS issues
-      allowTaint: true, // Allow cross-origin images
-    });
+
+    let capturedCanvas;
+    try {
+      console.log(`[MediaRecorder] Attempting html2canvas capture for ${clip.skillType}...`);
+
+      capturedCanvas = await html2canvas(container, {
+        width: spec.canvas.width,
+        height: spec.canvas.height,
+        backgroundColor: bgColor,
+        logging: false,
+        scale: 1,
+        foreignObjectRendering: false,
+        allowTaint: true,
+        ignoreElements: (element) => {
+          // Skip elements that might have problematic styles
+          const computedStyle = iframeWindow.getComputedStyle(element);
+          // Check if any color property has LAB format
+          const props = ['color', 'backgroundColor', 'borderColor'];
+          for (const prop of props) {
+            const value = computedStyle.getPropertyValue(prop);
+            if (value && (value.includes('lab(') || value.includes('oklch('))) {
+              console.warn(`[MediaRecorder] Skipping element with LAB color:`, prop, value);
+              return true;
+            }
+          }
+          return false;
+        },
+      });
+
+      console.log(`[MediaRecorder] html2canvas capture successful`);
+    } catch (err) {
+      console.error(`[MediaRecorder] html2canvas failed for ${clip.skillType}:`, err);
+
+      // FALLBACK: Draw a placeholder instead of crashing
+      console.warn(`[MediaRecorder] Using placeholder for ${clip.skillType}`);
+      const fallbackCanvas = document.createElement('canvas');
+      fallbackCanvas.width = spec.canvas.width;
+      fallbackCanvas.height = spec.canvas.height;
+      const fallbackCtx = fallbackCanvas.getContext('2d')!;
+
+      // Draw background
+      fallbackCtx.fillStyle = bgColor;
+      fallbackCtx.fillRect(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+
+      // Draw text indicating skill type
+      fallbackCtx.fillStyle = '#ffffff';
+      fallbackCtx.font = '48px sans-serif';
+      fallbackCtx.textAlign = 'center';
+      fallbackCtx.textBaseline = 'middle';
+      fallbackCtx.fillText(
+        `[${clip.skillType}]`,
+        fallbackCanvas.width / 2,
+        fallbackCanvas.height / 2
+      );
+
+      capturedCanvas = fallbackCanvas;
+    }
 
     // Draw captured canvas onto export canvas
     ctx.drawImage(capturedCanvas, 0, 0);
