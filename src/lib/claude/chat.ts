@@ -27,6 +27,14 @@ function buildChatSystemPrompt(
     JSON.stringify(currentSpec, null, 2),
     '```',
     '',
+    'AUDIO GENERATION (ELEVENLABS):',
+    'If the user requests voice narration or sound effects:',
+    '- Voice narration: "Add voice narration saying \'welcome to the video\'"',
+    '- Sound effects: "Add a whoosh sound effect at 5 seconds"',
+    'The system will automatically generate the audio using ElevenLabs and add it as an asset.',
+    'You will see a system message confirming the audio was generated with the asset ID.',
+    'Then you can reference that audio asset in your spec update (add it to an audio track).',
+    '',
     'RESPONSE FORMAT:',
     'When the user asks for changes, respond with:',
     '1. A brief explanation of what you changed (1-2 sentences)',
@@ -39,6 +47,7 @@ function buildChatSystemPrompt(
     '- Preserve all existing clips/tracks not mentioned in the request',
     '- Update metadata.modified to current ISO timestamp',
     '- Keep the same assets array unless the user asks to add/remove assets',
+    '- When audio is generated (system message), add it to the spec immediately',
   ].join('\n');
 }
 

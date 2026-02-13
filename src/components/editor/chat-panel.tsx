@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { useChatStore, type ChatMessage } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
-import { chatEditSpec } from '@/lib/claude/chat';
+import { chatEditSpecWithAudio } from '@/lib/claude/chat-with-audio';
 import { saveAPIKey, loadAPIKey, loadSetting, saveSetting } from '@/lib/storage/api-keys';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
 import { toast } from 'sonner';
@@ -57,7 +57,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
   content:
-    "I generated your video. Ask me to make changes \u2014 try \"Make the intro longer\" or \"Change the CTA text\".",
+    "I generated your video. Ask me to make changes \u2014 try \"Make the intro longer\", \"Add voice narration saying 'hello'\", or \"Add a whoosh sound effect\".",
   timestamp: Date.now(),
 };
 
@@ -67,6 +67,8 @@ export function ChatPanel() {
   const spec = useProjectStore((s) => s.spec);
   const assets = useProjectStore((s) => s.assets);
   const setSpec = useProjectStore((s) => s.setSpec);
+  const addAsset = useProjectStore((s) => s.addAsset);
+  const setAssetBlobUrl = useProjectStore((s) => s.setAssetBlobUrl);
 
   const [input, setInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -129,7 +131,15 @@ export function ChatPanel() {
         (m) => m.id !== 'welcome'
       );
 
-      const result = await chatEditSpec(apiMessages, spec, assets, aiConfig);
+      const result = await chatEditSpecWithAudio(apiMessages, spec, assets, aiConfig);
+
+      // If audio was generated, add it to project assets
+      if (result.generatedAudio) {
+        const { asset, blobUrl } = result.generatedAudio;
+        addAsset(asset);
+        setAssetBlobUrl(asset.id, blobUrl);
+        toast.success(`Generated audio: ${asset.filename}`);
+      }
 
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now()}-resp`,
