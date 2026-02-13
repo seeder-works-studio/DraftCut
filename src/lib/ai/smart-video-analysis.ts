@@ -44,14 +44,14 @@ export async function analyzeVideoWithFrameSampling(
   videoFile: File,
   geminiApiKey: string,
   options: {
-    maxFramesPerMinute?: number; // Default: 1
-    minSceneLength?: number; // Minimum seconds between scenes (default: 5)
+    maxFrames?: number; // Absolute max frames to analyze (default: 10)
+    minSceneLength?: number; // Minimum seconds between scenes (default: 10)
     purpose?: 'highlights' | 'story' | 'general';
   } = {}
 ): Promise<SmartVideoAnalysis> {
   const {
-    maxFramesPerMinute = 1,
-    minSceneLength = 5,
+    maxFrames = 10, // ALWAYS limit to 10 frames max
+    minSceneLength = 10, // Stricter: 10 seconds minimum between scenes
     purpose = 'highlights',
   } = options;
 
@@ -59,15 +59,14 @@ export async function analyzeVideoWithFrameSampling(
   const videoElement = await loadVideoElement(videoFile);
   const duration = videoElement.duration;
 
-  // Step 2: Detect scene changes (local, fast)
+  // Step 2: Detect scene changes (local, fast) with stricter threshold
   console.log('Detecting scene changes...');
   const sceneChanges = await detectSceneChanges(videoElement, minSceneLength);
   console.log(`Found ${sceneChanges.length} scene changes`);
 
-  // Step 3: Sample frames (max 1 per minute)
-  const maxFrames = Math.ceil(duration / 60) * maxFramesPerMinute;
+  // Step 3: Sample frames - HARD LIMIT of maxFrames (default 10)
   const sampledScenes = sampleScenes(sceneChanges, maxFrames);
-  console.log(`Sampling ${sampledScenes.length} frames for analysis`);
+  console.log(`Sampling ${sampledScenes.length} frames for analysis (max: ${maxFrames})`);
 
   // Step 4: Extract frames as images
   const frames = await extractFrames(videoElement, sampledScenes);
@@ -126,10 +125,10 @@ async function detectSceneChanges(
 
   const sceneChanges: number[] = [0]; // Always include start
   let lastFrame: ImageData | null = null;
-  const threshold = 30; // Difference threshold (0-100)
+  const threshold = 45; // STRICTER: Higher threshold = fewer scene changes (0-100)
 
-  // Sample every 0.5 seconds
-  const sampleInterval = 0.5;
+  // Sample every 1 second (faster detection, still catches major scene changes)
+  const sampleInterval = 1.0;
   const duration = video.duration;
 
   for (let t = 0; t < duration; t += sampleInterval) {
@@ -368,43 +367,24 @@ function aggregateAnalysis(
       reason: f.description,
     }));
 
-  // Generate clip suggestions (group consecutive good frames)
+  // Generate clip suggestions (extract few seconds around each good timestamp)
   const suggestedClips: Array<{ startTime: number; endTime: number; reason: string }> = [];
-  let currentClip: { start: number; end: number; reasons: string[] } | null = null;
+  const clipPadding = 3; // Extract 3 seconds before and after timestamp
 
   for (let i = 0; i < frameAnalyses.length; i++) {
     const frame = frameAnalyses[i];
 
-    if (frame.recommended) {
-      if (!currentClip) {
-        currentClip = {
-          start: frame.timestamp,
-          end: frame.timestamp + 5, // Assume 5 seconds per scene
-          reasons: [frame.description],
-        };
-      } else {
-        // Extend current clip
-        currentClip.end = frame.timestamp + 5;
-        currentClip.reasons.push(frame.description);
-      }
-    } else if (currentClip) {
-      // End current clip
-      suggestedClips.push({
-        startTime: currentClip.start,
-        endTime: currentClip.end,
-        reason: currentClip.reasons.join('; '),
-      });
-      currentClip = null;
-    }
-  }
+    if (frame.recommended && frame.interestScore >= 6) {
+      // Extract a clip around this timestamp (few seconds before + after)
+      const startTime = Math.max(0, frame.timestamp - clipPadding);
+      const endTime = Math.min(duration, frame.timestamp + clipPadding);
 
-  // Add last clip if exists
-  if (currentClip) {
-    suggestedClips.push({
-      startTime: currentClip.start,
-      endTime: currentClip.end,
-      reason: currentClip.reasons.join('; '),
-    });
+      suggestedClips.push({
+        startTime,
+        endTime,
+        reason: frame.description,
+      });
+    }
   }
 
   // Determine overall tone
@@ -468,8 +448,8 @@ export async function analyzeMultipleVideosWithFrameSampling(
     onProgress?.(i + 1, videos.length, videos[i].name);
 
     const analysis = await analyzeVideoWithFrameSampling(videos[i], geminiApiKey, {
-      maxFramesPerMinute: 1,
-      minSceneLength: 5,
+      maxFrames: 10,
+      minSceneLength: 10,
       purpose,
     });
 

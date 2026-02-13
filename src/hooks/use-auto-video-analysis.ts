@@ -28,13 +28,13 @@ export function useAutoVideoAnalysis() {
           description: 'Finding best moments in your video',
         });
 
-        // Run analysis
+        // Run analysis with max 10 frames
         const analysis: SmartVideoAnalysis = await analyzeVideoWithFrameSampling(
           file,
           geminiKey,
           {
-            maxFramesPerMinute: 1,
-            minSceneLength: 5,
+            maxFrames: 10, // HARD LIMIT: max 10 frames regardless of video length
+            minSceneLength: 10, // Stricter scene detection (10 seconds minimum)
             purpose: 'highlights', // Always look for highlights
           }
         );
