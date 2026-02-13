@@ -19,6 +19,8 @@ export interface FrameAnalysis {
   visualQuality: 'excellent' | 'good' | 'fair' | 'poor';
   tags: string[]; // ["action", "people", "landscape", etc.]
   recommended: boolean; // Should this scene be included?
+  isTalkingHead: boolean; // Is this a person speaking to camera?
+  speakerEngagement: number; // 0-10, how engaged/animated the speaker appears
 }
 
 export interface SmartVideoAnalysis {
@@ -325,6 +327,8 @@ function buildFrameAnalysisPrompt(
 
   return `You are analyzing ${frameCount} frames from a video. Each frame represents a scene change or key moment.
 
+IMPORTANT: This video likely contains TALKING HEAD FOOTAGE (people speaking to camera). Pay special attention to these moments.
+
 For EACH frame (in order), provide analysis in JSON format:
 
 {
@@ -334,18 +338,25 @@ For EACH frame (in order), provide analysis in JSON format:
   "motion": "static|slow|medium|fast (estimate based on visual blur/composition)",
   "visualQuality": "excellent|good|fair|poor",
   "tags": ["array", "of", "descriptive tags like action, people, landscape, product, text, etc."],
-  "recommended": <true if this scene should be included in final edit, false otherwise>
+  "recommended": <true if this scene should be included in final edit, false otherwise>,
+  "isTalkingHead": <true if this shows a person facing the camera (likely speaking), false otherwise>,
+  "speakerEngagement": <number 0-10, if talking head: how engaged/animated does the speaker appear? 0 if not a talking head>
 }
 
 ${purposeInstruction}
 
 Return a JSON array with ${frameCount} objects (one per frame), in order.
 
-IMPORTANT: Rate interestScore based on:
-- Visual interest (9-10: highly engaging, 7-8: good, 5-6: average, 3-4: boring, 0-2: skip)
-- Relevance to purpose
-- Composition quality
-- Subject clarity
+TALKING HEAD DETECTION:
+- isTalkingHead = true if you see a person's face clearly, facing the camera (typical of presentations, vlogs, interviews)
+- Look for: direct eye contact with camera, person centered in frame, speaking gesture/posture
+- speakerEngagement: Rate their energy (10 = very animated/excited, 5 = neutral, 0 = not a talking head)
+
+INTEREST SCORING:
+- Talking heads with high engagement (8-10) should get interestScore 8-10
+- Boring static shots or transitions should get 0-3
+- Visual interest, composition quality, and subject clarity all matter
+- ${purpose === 'highlights' ? 'Prioritize dynamic, engaging moments with clear subjects' : ''}
 
 Be honest - mark boring or low-quality frames as NOT recommended.`;
 }
@@ -359,22 +370,49 @@ function aggregateAnalysis(
   totalScenes: number,
   frameAnalyses: FrameAnalysis[]
 ): SmartVideoAnalysis {
-  // Find best moments (interestScore >= 7)
+  // Find best moments (prioritize talking heads with high engagement)
   const bestMoments = frameAnalyses
-    .filter((f) => f.interestScore >= 7)
+    .filter((f) => {
+      // Talking heads with good engagement always qualify
+      if (f.isTalkingHead && f.speakerEngagement >= 6) return true;
+      // Other interesting moments need high score
+      return f.interestScore >= 7;
+    })
+    .sort((a, b) => {
+      // Prioritize talking heads with high engagement
+      if (a.isTalkingHead && !b.isTalkingHead) return -1;
+      if (!a.isTalkingHead && b.isTalkingHead) return 1;
+      // Then sort by engagement/interest
+      const aScore = a.isTalkingHead ? a.speakerEngagement : a.interestScore;
+      const bScore = b.isTalkingHead ? b.speakerEngagement : b.interestScore;
+      return bScore - aScore;
+    })
     .map((f) => ({
       timestamp: f.timestamp,
-      reason: f.description,
+      reason: f.isTalkingHead
+        ? `Talking head (engagement: ${f.speakerEngagement}/10): ${f.description}`
+        : f.description,
     }));
 
   // Generate clip suggestions (extract few seconds around each good timestamp)
-  const suggestedClips: Array<{ startTime: number; endTime: number; reason: string }> = [];
+  const suggestedClips: Array<{
+    startTime: number;
+    endTime: number;
+    reason: string;
+    isTalkingHead?: boolean;
+    speakerEngagement?: number;
+  }> = [];
   const clipPadding = 3; // Extract 3 seconds before and after timestamp
 
   for (let i = 0; i < frameAnalyses.length; i++) {
     const frame = frameAnalyses[i];
 
-    if (frame.recommended && frame.interestScore >= 6) {
+    // Include talking heads with decent engagement OR other high-interest moments
+    const shouldInclude =
+      (frame.isTalkingHead && frame.speakerEngagement >= 6) ||
+      (frame.recommended && frame.interestScore >= 6);
+
+    if (shouldInclude) {
       // Extract a clip around this timestamp (few seconds before + after)
       const startTime = Math.max(0, frame.timestamp - clipPadding);
       const endTime = Math.min(duration, frame.timestamp + clipPadding);
@@ -382,7 +420,11 @@ function aggregateAnalysis(
       suggestedClips.push({
         startTime,
         endTime,
-        reason: frame.description,
+        reason: frame.isTalkingHead
+          ? `Talking head (${frame.speakerEngagement}/10 engagement): ${frame.description}`
+          : frame.description,
+        isTalkingHead: frame.isTalkingHead,
+        speakerEngagement: frame.speakerEngagement,
       });
     }
   }
