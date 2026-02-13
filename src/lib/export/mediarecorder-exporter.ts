@@ -605,6 +605,7 @@ async function renderRemotionSkillToCanvas(
   if (!skillDef) return;
 
   // Create hidden container for rendering
+  // CRITICAL: Isolate from page CSS to avoid OKLCH color inheritance
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.left = '-9999px';
@@ -613,6 +614,26 @@ async function renderRemotionSkillToCanvas(
   container.style.height = `${spec.canvas.height}px`;
   container.style.overflow = 'hidden';
   container.style.backgroundColor = spec.canvas.backgroundColor || '#000000';
+
+  // Reset all CSS variables to prevent OKLCH inheritance
+  container.style.cssText += `
+    --background: #ffffff;
+    --foreground: #000000;
+    --primary: #000000;
+    --secondary: #ffffff;
+    --accent: #3b82f6;
+    --muted: #f3f4f6;
+    --destructive: #ef4444;
+  `;
+
+  // Isolate from parent styles
+  container.style.all = 'initial';
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '0';
+  container.style.width = `${spec.canvas.width}px`;
+  container.style.height = `${spec.canvas.height}px`;
+
   document.body.appendChild(container);
 
   try {
@@ -669,12 +690,16 @@ async function renderRemotionSkillToCanvas(
     });
 
     // Capture rendered content to canvas using html2canvas
+    // Use explicit hex background to avoid CSS color parsing
+    const bgColor = spec.canvas.backgroundColor || '#000000';
     const capturedCanvas = await html2canvas(container, {
       width: spec.canvas.width,
       height: spec.canvas.height,
-      backgroundColor: null,
+      backgroundColor: bgColor,
       logging: false,
       scale: 1,
+      foreignObjectRendering: false, // Disable foreign object to avoid CSS issues
+      allowTaint: true, // Allow cross-origin images
     });
 
     // Draw captured canvas onto export canvas

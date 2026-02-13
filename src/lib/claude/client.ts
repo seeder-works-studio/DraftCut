@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { validateProjectSpec } from '@/lib/spec/validator';
+import { validateAndFixSpec, formatValidationReport } from '@/lib/spec/post-generation-validator';
 import { buildSystemPrompt } from './prompt';
 import type { WebsiteContext } from './prompt';
 import type { Asset, BrandKit, ProjectSpec } from '@/lib/spec/types';
