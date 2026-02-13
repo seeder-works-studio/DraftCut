@@ -118,7 +118,7 @@ async function detectSceneChanges(
   minSceneLength: number
 ): Promise<number[]> {
   const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 
   canvas.width = 160; // Low res for speed
   canvas.height = 90;
@@ -271,7 +271,7 @@ async function analyzeFramesWithGemini(
   }));
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
