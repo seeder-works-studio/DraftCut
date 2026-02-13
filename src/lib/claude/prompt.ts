@@ -263,6 +263,8 @@ export function buildSystemPrompt(
     '- NO unescaped newlines in strings - use \\n instead',
     '- Arrays must use proper JSON array syntax: ["item1", "item2"]',
     '- Numbers should NOT be quoted: duration: 5 (not "5")',
+    '- Colors must ONLY use hex format: "#RRGGBB" or "#RRGGBBAA"',
+    '- DO NOT use rgb(), rgba(), hsl(), lab(), or oklab() - ONLY hex colors!',
     '- Return ONLY valid JSON - no markdown, no explanations',
   ].join('\n') + websiteSection;
 }
