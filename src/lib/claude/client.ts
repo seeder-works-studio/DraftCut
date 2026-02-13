@@ -19,6 +19,45 @@ export function anthropic(apiKey: string): Anthropic {
   });
 }
 
+/**
+ * Sanitize colors in the spec to replace unsupported formats with hex
+ */
+function sanitizeColors(obj: any): any {
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sanitizeColors(item));
+  }
+
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Check if this is a color property
+    const isColorProp =
+      key.toLowerCase().includes('color') ||
+      key.toLowerCase().includes('background');
+
+    if (isColorProp && typeof value === 'string') {
+      // If it's not a hex color, replace with a fallback
+      if (!value.match(/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/)) {
+        logger.warn('VideoGeneration', 'Replacing unsupported color format', {
+          property: key,
+          original: value,
+          replacement: '#ffffff',
+        });
+        result[key] = '#ffffff'; // Fallback to white
+      } else {
+        result[key] = value;
+      }
+    } else {
+      result[key] = sanitizeColors(value);
+    }
+  }
+
+  return result;
+}
+
 export async function generateVideoSpec(
   userPrompt: string,
   assets: Asset[],
@@ -214,6 +253,9 @@ export async function generateVideoSpec(
         assetsAfterFilter: spec.assets,
       });
     }
+
+    // Sanitize colors: convert unsupported color formats to hex
+    spec = sanitizeColors(spec);
 
     logger.info('VideoGeneration', 'Validating project spec');
     const validatedSpec = validateProjectSpec(spec);
