@@ -65,6 +65,47 @@ function normalizeColorToHex(color: string): `#${string}` {
 }
 
 /**
+ * Sanitize all colors in the spec to hex format
+ */
+function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
+  const sanitized = JSON.parse(JSON.stringify(spec)) as ProjectSpec;
+
+  // Sanitize canvas background
+  if (sanitized.canvas.backgroundColor) {
+    sanitized.canvas.backgroundColor = normalizeColorToHex(sanitized.canvas.backgroundColor);
+  }
+
+  // Sanitize brand kit colors
+  if (sanitized.brandKit) {
+    if (sanitized.brandKit.primaryColor) {
+      sanitized.brandKit.primaryColor = normalizeColorToHex(sanitized.brandKit.primaryColor);
+    }
+    if (sanitized.brandKit.secondaryColor) {
+      sanitized.brandKit.secondaryColor = normalizeColorToHex(sanitized.brandKit.secondaryColor);
+    }
+  }
+
+  // Sanitize skill props colors
+  for (const track of sanitized.composition.tracks) {
+    for (const clip of track.clips) {
+      if (clip.skillProps && typeof clip.skillProps === 'object') {
+        const props = clip.skillProps as Record<string, unknown>;
+        for (const [key, value] of Object.entries(props)) {
+          if (typeof value === 'string' && (
+            key.toLowerCase().includes('color') ||
+            key.toLowerCase().includes('background')
+          )) {
+            props[key] = normalizeColorToHex(value);
+          }
+        }
+      }
+    }
+  }
+
+  return sanitized;
+}
+
+/**
  * Export video using Diffusion Studios with hardware acceleration
  */
 export async function exportWithDiffusionStudios(
@@ -76,7 +117,11 @@ export async function exportWithDiffusionStudios(
     core = await import('@diffusionstudio/core');
   }
 
-  const { spec, assetBlobUrls } = context;
+  const { assetBlobUrls } = context;
+
+  // Sanitize all colors in spec to hex format (Diffusion Studios requirement)
+  const spec = sanitizeSpecColors(context.spec);
+
   const quality = options.quality || 'high';
   const fps = options.fps || spec.canvas.fps;
   const resolution = options.resolution || 1;
@@ -175,12 +220,18 @@ async function addVideoClip(
 
   const blobUrl = assetBlobUrls[clip.assetId];
   if (!blobUrl) {
-    console.warn(`Video asset not found: ${clip.assetId}`);
-    return;
+    console.error(`Video asset blob URL not found: ${clip.assetId}`);
+    throw new Error(`Video asset not loaded: ${clip.assetId}. Please ensure all assets are uploaded.`);
   }
 
   // Create video source
-  const source = await core.Source.from<DiffusionCore.VideoSource>(blobUrl);
+  let source: DiffusionCore.VideoSource;
+  try {
+    source = await core.Source.from<DiffusionCore.VideoSource>(blobUrl);
+  } catch (err) {
+    console.error(`Failed to load video source from ${blobUrl}:`, err);
+    throw new Error(`Failed to load video asset: ${clip.assetId}`);
+  }
 
   // Create video clip with trim range
   const videoClip = new core.VideoClip(source, {

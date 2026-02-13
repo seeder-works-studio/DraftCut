@@ -11,6 +11,77 @@ import * as ReactDOM from 'react-dom/client';
 import { Player } from '@remotion/player';
 import html2canvas from 'html2canvas';
 
+/**
+ * Convert any color format to hex (for Remotion compatibility)
+ */
+function normalizeColorToHex(color: string): string {
+  // Already hex
+  if (color.startsWith('#')) {
+    return color;
+  }
+
+  // Named colors
+  if (color === 'transparent') {
+    return '#000000';
+  }
+
+  // LAB, RGB, HSL, etc - convert using canvas
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const imageData = ctx.getImageData(0, 0, 1, 1);
+    const [r, g, b] = imageData.data;
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  } catch {
+    return '#000000';
+  }
+}
+
+/**
+ * Sanitize all colors in the spec to hex format
+ */
+function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
+  const sanitized = JSON.parse(JSON.stringify(spec)) as ProjectSpec;
+
+  // Sanitize canvas background
+  if (sanitized.canvas.backgroundColor) {
+    sanitized.canvas.backgroundColor = normalizeColorToHex(sanitized.canvas.backgroundColor);
+  }
+
+  // Sanitize brand kit colors
+  if (sanitized.brandKit) {
+    if (sanitized.brandKit.primaryColor) {
+      sanitized.brandKit.primaryColor = normalizeColorToHex(sanitized.brandKit.primaryColor);
+    }
+    if (sanitized.brandKit.secondaryColor) {
+      sanitized.brandKit.secondaryColor = normalizeColorToHex(sanitized.brandKit.secondaryColor);
+    }
+  }
+
+  // Sanitize skill props colors
+  for (const track of sanitized.composition.tracks) {
+    for (const clip of track.clips) {
+      if (clip.skillProps && typeof clip.skillProps === 'object') {
+        const props = clip.skillProps as Record<string, unknown>;
+        for (const [key, value] of Object.entries(props)) {
+          if (typeof value === 'string' && (
+            key.toLowerCase().includes('color') ||
+            key.toLowerCase().includes('background')
+          )) {
+            props[key] = normalizeColorToHex(value);
+          }
+        }
+      }
+    }
+  }
+
+  return sanitized;
+}
+
 export interface MediaRecorderExportOptions {
   quality?: 'low' | 'medium' | 'high';
   videoBitrate?: number;
@@ -31,7 +102,10 @@ export async function exportWithMediaRecorder(
   context: ExportContext,
   options: MediaRecorderExportOptions = {}
 ): Promise<Blob> {
-  const { spec, assetBlobUrls } = context;
+  // Sanitize all colors to hex format before export
+  const spec = sanitizeSpecColors(context.spec);
+  const { assetBlobUrls } = context;
+
   const {
     quality = 'high',
     onProgress,
