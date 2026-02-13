@@ -39,14 +39,29 @@ function sanitizeColors(obj: any): any {
       key.toLowerCase().includes('background');
 
     if (isColorProp && typeof value === 'string') {
-      // If it's not a hex color, replace with a fallback
-      if (!value.match(/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/)) {
-        logger.warn('VideoGeneration', 'Replacing unsupported color format', {
-          property: key,
-          original: value,
-          replacement: '#ffffff',
-        });
-        result[key] = '#ffffff'; // Fallback to white
+      // Allow transparent, hex, rgb/rgba colors
+      const isValidColor =
+        value === 'transparent' ||
+        value.match(/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/) ||
+        value.match(/^rgba?\(/);
+
+      if (!isValidColor) {
+        // Reject LAB/LCH colors and other unsupported formats
+        if (value.startsWith('lab(') || value.startsWith('lch(') || value.startsWith('oklab(') || value.startsWith('oklch(')) {
+          logger.warn('VideoGeneration', 'Replacing LAB color with fallback', {
+            property: key,
+            original: value,
+            replacement: '#8B5CF6',
+          });
+          result[key] = '#8B5CF6'; // Brand purple fallback
+        } else {
+          logger.warn('VideoGeneration', 'Replacing unsupported color format', {
+            property: key,
+            original: value,
+            replacement: '#ffffff',
+          });
+          result[key] = '#ffffff'; // Fallback to white
+        }
       } else {
         result[key] = value;
       }
