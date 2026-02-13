@@ -728,7 +728,7 @@ async function renderRemotionSkillToCanvas(
     // Cleanup
     root.unmount();
   } finally {
-    document.body.removeChild(container);
+    document.body.removeChild(iframe);
   }
 }
 
