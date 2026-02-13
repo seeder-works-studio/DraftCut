@@ -42,39 +42,41 @@ export function Timeline() {
   const totalWidth = spec.canvas.duration * pixelsPerSecond;
 
   return (
-    <div className="border-t bg-card flex flex-col">
-      {/* Time ruler */}
-      <div
-        className="relative h-6 border-b overflow-x-auto"
-        ref={timelineRef}
-        onClick={handleTimelineClick}
-      >
-        <div className="relative" style={{ width: totalWidth, minWidth: '100%' }}>
-          <TimeRuler
-            duration={spec.canvas.duration}
-            pps={pixelsPerSecond}
-          />
-          {/* Playhead */}
-          <div
-            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 pointer-events-none"
-            style={{ left: currentTime * pixelsPerSecond }}
-          />
-        </div>
-      </div>
-
-      {/* Tracks */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto">
+    <div className="border-t bg-card flex flex-col h-full">
+      {/* Single scroll container for both ruler and tracks */}
+      <div className="flex-1 overflow-x-auto overflow-y-auto" ref={timelineRef}>
         <div style={{ width: totalWidth, minWidth: '100%' }}>
-          {spec.composition.tracks.map((track) => (
-            <TrackRow
-              key={track.id}
-              track={track}
-              pps={pixelsPerSecond}
-              currentTime={currentTime}
-              selectedClipId={selectedClipId}
-              onSelectClip={setSelectedClipId}
-            />
-          ))}
+          {/* Time ruler - sticky at top */}
+          <div
+            className="sticky top-0 z-30 bg-card border-b h-6 cursor-pointer"
+            onClick={handleTimelineClick}
+          >
+            <div className="relative h-full">
+              <TimeRuler
+                duration={spec.canvas.duration}
+                pps={pixelsPerSecond}
+              />
+              {/* Playhead */}
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 pointer-events-none"
+                style={{ left: currentTime * pixelsPerSecond }}
+              />
+            </div>
+          </div>
+
+          {/* Tracks */}
+          <div>
+            {spec.composition.tracks.map((track) => (
+              <TrackRow
+                key={track.id}
+                track={track}
+                pps={pixelsPerSecond}
+                currentTime={currentTime}
+                selectedClipId={selectedClipId}
+                onSelectClip={setSelectedClipId}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
