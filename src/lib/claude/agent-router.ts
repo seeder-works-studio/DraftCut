@@ -4,6 +4,7 @@
  */
 
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
 export interface AgentAction {
   type: 'fetch_logo' | 'fetch_stock_images' | 'generate_music' | 'generate_voice' | 'generate_sfx' | 'update_spec' | 'ask_clarification';
@@ -218,63 +219,118 @@ export async function analyzeRequest(
   userMessage: string,
   apiKey: string,
   model: string = 'gpt-4-turbo-preview',
-  baseURL?: string
+  baseURL?: string,
+  provider?: string
 ): Promise<AgentPlan> {
-  // Use OpenAI SDK (works with OpenRouter, Cerebras, etc.)
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: baseURL || 'https://api.openai.com/v1',
-    dangerouslyAllowBrowser: true, // Safe because we're not shipping keys in code
-  });
-
   console.log('[Agent Router] Analyzing request:', userMessage);
-
-  const response = await openai.chat.completions.create({
-    model,
-    max_tokens: 2000,
-    messages: [
-      {
-        role: 'system',
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: 'user',
-        content: userMessage,
-      },
-    ],
-    tools: AVAILABLE_TOOLS,
-    tool_choice: 'auto',
-  });
-
-  console.log('[Agent Router] Response:', JSON.stringify(response, null, 2));
+  console.log('[Agent Router] Provider:', provider, 'Model:', model);
 
   const actions: AgentAction[] = [];
   let needsClarification = false;
   let clarificationQuestion: string | undefined;
 
-  // Parse tool calls from response
-  const toolCalls = response.choices[0]?.message?.tool_calls || [];
+  // Use Anthropic SDK for Claude
+  if (provider === 'claude' || model.includes('claude')) {
+    const anthropic = new Anthropic({
+      apiKey,
+      dangerouslyAllowBrowser: true, // Safe: user's own API key, not hardcoded
+    });
 
-  for (const toolCall of toolCalls) {
-    if (toolCall.type === 'function') {
-      const functionName = toolCall.function.name;
-      const functionArgs = JSON.parse(toolCall.function.arguments);
-
-      const action: AgentAction = {
-        type: functionName as AgentAction['type'],
-        params: functionArgs as Record<string, unknown>,
-        reason: `AI decided to use ${functionName}`,
+    // Convert OpenAI tool format to Anthropic format
+    const anthropicTools = AVAILABLE_TOOLS.map((tool) => {
+      if (!('function' in tool)) throw new Error('Expected function tool');
+      const fn = tool.function;
+      return {
+        name: fn.name,
+        description: fn.description || '',
+        input_schema: fn.parameters,
       };
+    }) as Anthropic.Tool[];
 
-      actions.push(action);
+    const response = await anthropic.messages.create({
+      model,
+      max_tokens: 2000,
+      system: SYSTEM_PROMPT,
+      tools: anthropicTools,
+      messages: [
+        {
+          role: 'user',
+          content: userMessage,
+        },
+      ],
+    });
 
-      // Check if it's asking for clarification
-      if (functionName === 'ask_clarification') {
-        needsClarification = true;
-        clarificationQuestion = functionArgs.question as string;
+    console.log('[Agent Router] Anthropic Response:', JSON.stringify(response, null, 2));
+
+    // Parse tool uses from Anthropic response
+    for (const block of response.content) {
+      if (block.type === 'tool_use') {
+        const action: AgentAction = {
+          type: block.name as AgentAction['type'],
+          params: block.input as Record<string, unknown>,
+          reason: `AI decided to use ${block.name}`,
+        };
+
+        actions.push(action);
+
+        if (block.name === 'ask_clarification') {
+          needsClarification = true;
+          clarificationQuestion = (block.input as { question: string }).question;
+        }
+
+        console.log('[Agent Router] Action planned:', action);
       }
+    }
+  } else {
+    // Use OpenAI SDK for other providers (OpenAI, OpenRouter, Cerebras, etc.)
+    const openai = new OpenAI({
+      apiKey,
+      baseURL: baseURL || 'https://api.openai.com/v1',
+      dangerouslyAllowBrowser: true,
+    });
 
-      console.log('[Agent Router] Action planned:', action);
+    const response = await openai.chat.completions.create({
+      model,
+      max_tokens: 2000,
+      messages: [
+        {
+          role: 'system',
+          content: SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: userMessage,
+        },
+      ],
+      tools: AVAILABLE_TOOLS,
+      tool_choice: 'auto',
+    });
+
+    console.log('[Agent Router] OpenAI Response:', JSON.stringify(response, null, 2));
+
+    // Parse tool calls from OpenAI response
+    const toolCalls = response.choices[0]?.message?.tool_calls || [];
+
+    for (const toolCall of toolCalls) {
+      if (toolCall.type === 'function') {
+        const functionName = toolCall.function.name;
+        const functionArgs = JSON.parse(toolCall.function.arguments);
+
+        const action: AgentAction = {
+          type: functionName as AgentAction['type'],
+          params: functionArgs as Record<string, unknown>,
+          reason: `AI decided to use ${functionName}`,
+        };
+
+        actions.push(action);
+
+        if (functionName === 'ask_clarification') {
+          needsClarification = true;
+          clarificationQuestion = functionArgs.question as string;
+        }
+
+        console.log('[Agent Router] Action planned:', action);
+      }
     }
   }
 

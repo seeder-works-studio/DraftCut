@@ -964,7 +964,13 @@ export async function chatWithAgentRouter(
   }
 
   // Use the agent router to analyze the request
-  const plan = await analyzeRequest(lastUserMessage, aiConfig.apiKey, aiConfig.model, baseURL);
+  const plan = await analyzeRequest(
+    lastUserMessage,
+    aiConfig.apiKey,
+    aiConfig.model,
+    baseURL,
+    aiConfig.provider // Pass provider so agent router knows which SDK to use
+  );
 
   console.log('[Agent Chat] Execution plan:', plan);
 
