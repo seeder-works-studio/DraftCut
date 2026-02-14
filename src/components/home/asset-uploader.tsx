@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { saveAsset } from '@/lib/storage/assets';
 import { useProjectStore } from '@/stores/project-store';
-import { useAutoVideoAnalysis } from '@/hooks/use-auto-video-analysis';
 import { toast } from 'sonner';
 import type { Asset } from '@/lib/spec/types';
 
@@ -28,7 +27,6 @@ export function AssetUploader() {
   const inputRef = useRef<HTMLInputElement>(null);
   const addAsset = useProjectStore((s) => s.addAsset);
   const setAssetBlobUrl = useProjectStore((s) => s.setAssetBlobUrl);
-  const { analyzeVideo } = useAutoVideoAnalysis();
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -49,19 +47,15 @@ export function AssetUploader() {
           setAssetBlobUrl(asset.id, blobUrl);
           toast.success(`Added ${file.name}`);
 
-          // Auto-analyze videos (runs in background)
-          if (file.type.startsWith('video/')) {
-            analyzeVideo(file, asset.id).catch((err) => {
-              console.error('Video analysis error:', err);
-            });
-          }
+          // Note: Video analysis now happens during video generation, not on upload
+          // This avoids wasting API calls on videos that might not be used
         } catch {
           toast.error(`Failed to add ${file.name}`);
         }
       }
       setIsUploading(false);
     },
-    [addAsset, setAssetBlobUrl, analyzeVideo]
+    [addAsset, setAssetBlobUrl]
   );
 
   const handleDrop = useCallback(

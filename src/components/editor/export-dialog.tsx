@@ -84,6 +84,9 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
     setIsExporting(true);
     setProgress(0);
 
+    // Track temporary blob URLs we create (for cleanup)
+    const temporaryBlobUrls: string[] = [];
+
     try {
       // CRITICAL: Ensure all assets are loaded before export
       toast.info('Loading assets...');
@@ -97,6 +100,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
           if (result) {
             const blobUrl = URL.createObjectURL(result.blob);
             loadedBlobUrls[asset.id] = blobUrl;
+            temporaryBlobUrls.push(blobUrl); // Track for cleanup
             console.log(`Asset loaded: ${asset.id} -> ${blobUrl}`);
           } else {
             toast.error(`Failed to load asset: ${asset.filename}`);
@@ -122,11 +126,18 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
       // Update store with loaded blob URLs
       const setAssetBlobUrl = useProjectStore.getState().setAssetBlobUrl;
+      const persistedUrls: string[] = []; // Track which URLs we persisted
       for (const [id, url] of Object.entries(loadedBlobUrls)) {
         if (!assetBlobUrls[id]) {
           setAssetBlobUrl(id, url);
+          persistedUrls.push(url); // Mark as persisted (will be managed by useAssetLoader)
         }
       }
+
+      // Remove persisted URLs from temporary list (they're now managed by the store)
+      const urlsToClea Human: up = temporaryBlobUrls.filter(url => !persistedUrls.includes(url));
+      temporaryBlobUrls.length = 0;
+      temporaryBlobUrls.push(...urlsToCleanup);
 
       console.log('All assets loaded successfully:', Object.keys(loadedBlobUrls));
 
@@ -218,6 +229,11 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       toast.error(message);
       console.error('Asset loading error:', err);
     } finally {
+      // Clean up temporary blob URLs (not managed by store)
+      if (temporaryBlobUrls.length > 0) {
+        console.log(`Revoking ${temporaryBlobUrls.length} temporary blob URLs`);
+        temporaryBlobUrls.forEach(url => URL.revokeObjectURL(url));
+      }
       setIsExporting(false);
       setProgress(0);
     }

@@ -115,6 +115,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setAssetBlobUrl: (assetId, url) => {
     logger.debug('ProjectStore', 'Setting blob URL for asset', { assetId });
+
+    // Revoke existing blob URL if different from new one
+    const existingUrl = get().assetBlobUrls[assetId];
+    if (existingUrl && existingUrl !== url) {
+      logger.debug('ProjectStore', 'Revoking old blob URL for asset', { assetId });
+      URL.revokeObjectURL(existingUrl);
+    }
+
     set((state) => ({
       assetBlobUrls: { ...state.assetBlobUrls, [assetId]: url },
     }));

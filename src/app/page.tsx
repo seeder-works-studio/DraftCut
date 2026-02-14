@@ -17,10 +17,12 @@ import { generateVideoSpec } from '@/lib/claude/client';
 import { exampleProjectSpec } from '@/lib/spec/example';
 import type { BrandKit } from '@/lib/spec/types';
 import { saveSetting, loadAPIKey } from '@/lib/storage/api-keys';
-import { saveAsset } from '@/lib/storage/assets';
+import { saveAsset, loadAsset } from '@/lib/storage/assets';
 import { processWebsiteUrl } from '@/lib/ai/website';
 import { generateMusic } from '@/lib/ai/music';
 import { generateMusicBeatoven } from '@/lib/ai/beatoven';
+import { analyzeVideoWithFrameSampling, type SmartVideoAnalysis } from '@/lib/ai/smart-video-analysis';
+import type { VideoAnalysisSummary } from '@/lib/spec/types';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 
@@ -41,6 +43,34 @@ function extractUrl(text: string): string | null {
     return `https://${domain}`;
   }
   return null;
+}
+
+/**
+ * Get most common subjects from frame analyses
+ */
+function getMostCommonSubjects(
+  frames: Array<{ subjects: string[]; interestScore: number }>
+): string[] {
+  const subjectCounts = new Map<string, number>();
+
+  for (const frame of frames) {
+    for (const subject of frame.subjects) {
+      subjectCounts.set(subject, (subjectCounts.get(subject) || 0) + 1);
+    }
+  }
+
+  return Array.from(subjectCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map((entry) => entry[0]);
+}
+
+/**
+ * Calculate average interest score for a clip
+ */
+function calculateClipScore(frames: Array<{ interestScore: number }>): number {
+  if (frames.length === 0) return 5;
+  return frames.reduce((sum, f) => sum + f.interestScore, 0) / frames.length;
 }
 
 export default function HomePage() {
@@ -127,8 +157,8 @@ export default function HomePage() {
       return;
     }
 
-    // Check if any videos are still being analyzed
-    const videosBeingAnalyzed = assets.filter(
+    // Check which videos need analysis (not yet analyzed)
+    const videosNeedingAnalysis = assets.filter(
       (a) => a.type === 'video' && !a.videoAnalysis?.analyzed
     );
 
@@ -141,13 +171,13 @@ export default function HomePage() {
 
     // Initialize progress steps
     const initialSteps: GenerationStep[] = [
-      ...(videosBeingAnalyzed.length > 0
+      ...(videosNeedingAnalysis.length > 0
         ? [
             {
               id: 'video-analysis',
               label: 'Analyzing Videos',
-              description: `Finding best moments in ${videosBeingAnalyzed.length} video${videosBeingAnalyzed.length > 1 ? 's' : ''}`,
-              status: 'in-progress' as const,
+              description: `Finding best moments in ${videosNeedingAnalysis.length} video${videosNeedingAnalysis.length > 1 ? 's' : ''}`,
+              status: 'pending' as const,
             },
           ]
         : []),
@@ -193,29 +223,79 @@ export default function HomePage() {
       let websiteContext: { title: string; textContent: string; url: string } | undefined;
       let currentBrandKit = { ...brandKit };
 
-      // Step 1: Wait for video analysis to complete
-      if (videosBeingAnalyzed.length > 0) {
-        logger.info('HomePage', 'Waiting for video analysis to complete', {
-          count: videosBeingAnalyzed.length,
+      // Step 1: Analyze videos (runs during generation, not on upload)
+      if (videosNeedingAnalysis.length > 0) {
+        logger.info('HomePage', 'Starting video analysis', {
+          count: videosNeedingAnalysis.length,
         });
+        updateStepStatus('video-analysis', 'in-progress');
 
-        // Poll until all videos are analyzed (check every 2 seconds)
-        while (true) {
-          const currentAssets = useProjectStore.getState().assets;
-          const stillAnalyzing = currentAssets.filter(
-            (a) =>
-              a.type === 'video' &&
-              !a.videoAnalysis?.analyzed &&
-              videosBeingAnalyzed.some((v) => v.id === a.id)
-          );
+        // Check if Gemini API key is available
+        const geminiKey = await loadAPIKey('gemini-video');
+        if (!geminiKey) {
+          logger.warn('HomePage', 'No Gemini API key - skipping video analysis');
+          updateStepStatus('video-analysis', 'skipped');
+          toast.warning('Video analysis skipped - no Gemini API key configured');
+        } else {
+          // Analyze all videos in parallel
+          const analysisPromises = videosNeedingAnalysis.map(async (asset) => {
+            try {
+              // Load video file from IndexedDB
+              const result = await loadAsset(asset.id);
+              if (!result) {
+                logger.error('HomePage', 'Asset not found in IndexedDB', { assetId: asset.id });
+                return;
+              }
 
-          if (stillAnalyzing.length === 0) {
-            logger.info('HomePage', 'All videos analyzed');
-            updateStepStatus('video-analysis', 'completed');
-            break;
-          }
+              // Analyze video
+              const analysis: SmartVideoAnalysis = await analyzeVideoWithFrameSampling(
+                result.blob as File,
+                geminiKey,
+                {
+                  maxFrames: 10,
+                  minSceneLength: 10,
+                  purpose: 'highlights',
+                }
+              );
 
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+              // Convert to summary format
+              const summary: VideoAnalysisSummary = {
+                analyzed: true,
+                analyzedAt: new Date().toISOString(),
+                totalScenes: analysis.totalScenes,
+                bestMomentsCount: analysis.bestMoments.length,
+                suggestedClipsCount: analysis.suggestedClips.length,
+                overallTone: analysis.overallTone,
+                topSubjects: getMostCommonSubjects(analysis.frames),
+                suggestedClips: analysis.suggestedClips.map((clip) => ({
+                  startTime: clip.startTime,
+                  endTime: clip.endTime,
+                  reason: clip.reason,
+                  interestScore: calculateClipScore(
+                    analysis.frames.filter(
+                      (f) => f.timestamp >= clip.startTime && f.timestamp <= clip.endTime
+                    )
+                  ),
+                })),
+                bestMoments: analysis.bestMoments,
+              };
+
+              // Update asset with analysis
+              useProjectStore.getState().updateAsset(asset.id, { videoAnalysis: summary });
+
+              logger.info('HomePage', 'Video analyzed successfully', {
+                assetId: asset.id,
+                bestMoments: analysis.bestMoments.length,
+                suggestedClips: analysis.suggestedClips.length,
+              });
+            } catch (error) {
+              logger.error('HomePage', 'Video analysis failed', { assetId: asset.id, error });
+            }
+          });
+
+          await Promise.all(analysisPromises);
+          logger.info('HomePage', 'All videos analyzed');
+          updateStepStatus('video-analysis', 'completed');
         }
       }
 
