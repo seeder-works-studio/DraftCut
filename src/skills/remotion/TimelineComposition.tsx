@@ -111,11 +111,20 @@ export const TimelineComposition: React.FC<TimelineCompositionProps> = ({
         const startFrame = Math.round(clip.startTime * canvas.fps);
         const durationInFrames = Math.round(clip.duration * canvas.fps);
 
-        // Inject assetBlobUrls into skill props
-        const enhancedProps = {
+        // Inject assetBlobUrls and brand kit logo into skill props
+        const enhancedProps: Record<string, unknown> = {
           ...(clip.skillProps || skillDef.defaultProps),
           assetBlobUrls,
         };
+
+        // Auto-inject brand kit logo for IntroTitleCard and OutroCTA if not already set
+        if (
+          (clip.skillType === 'IntroTitleCard' || clip.skillType === 'OutroCTA') &&
+          spec.brandKit?.logoAssetId &&
+          !enhancedProps.logoAssetId
+        ) {
+          enhancedProps.logoAssetId = spec.brandKit.logoAssetId;
+        }
 
         const SkillComponent = skillDef.component;
 

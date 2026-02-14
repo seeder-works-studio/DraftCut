@@ -185,8 +185,6 @@ export async function getJamendoMusic(
     }
     throw error;
   }
-
-  return { blob, metadata: track };
 }
 
 /**

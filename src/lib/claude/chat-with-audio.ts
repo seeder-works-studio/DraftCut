@@ -16,6 +16,7 @@ import { generateMusicBeatoven } from '@/lib/ai/beatoven';
 import { getPixabaySoundEffect } from '@/lib/ai/pixabay';
 import { getJamendoMusic } from '@/lib/ai/jamendo';
 import { processWebsiteUrl } from '@/lib/ai/website';
+import { getUnsplashPhotos } from '@/lib/ai/unsplash';
 import { saveAsset } from '@/lib/storage/assets';
 import type { Asset, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
@@ -44,14 +45,15 @@ export async function chatEditSpecWithAudio(
     .filter((m) => m.role === 'user')
     .pop()?.content || '';
 
-  // Check if user is requesting voice narration, sound effects, music, or logo fetch
+  // Check if user is requesting voice narration, sound effects, music, logo fetch, or stock images
   const isVoiceRequest = isVoiceNarrationRequest(lastUserMessage);
   const isSoundRequest = isSoundEffectRequest(lastUserMessage);
   const isMusicRequest = isMusicGenerationRequest(lastUserMessage);
   const isLogoRequest = isLogoFetchRequest(lastUserMessage);
+  const isStockRequest = isStockImageRequest(lastUserMessage);
 
   let generatedAudio: ChatWithAudioResult['generatedAudio'];
-  let updatedSpec = currentSpec; // Will be updated if audio is added or logo is fetched
+  let updatedSpec = currentSpec; // Will be updated if audio is added, logo is fetched, or images are added
 
   // Generate audio if requested (voice or sound effects)
   if (isVoiceRequest || isSoundRequest) {
@@ -493,6 +495,87 @@ export async function chatEditSpecWithAudio(
     }
   }
 
+  // Fetch stock images if requested
+  if (isStockRequest) {
+    const unsplashKey = await loadAPIKey('unsplash');
+
+    if (unsplashKey) {
+      try {
+        const query = extractStockImageQuery(lastUserMessage);
+        console.log('[StockImages] Fetching images for:', query);
+
+        const photos = await getUnsplashPhotos(query, unsplashKey, 5);
+
+        if (photos.length > 0) {
+          // Save all photos as assets
+          const photoAssets: Asset[] = [];
+          for (let i = 0; i < photos.length; i++) {
+            const { blob, metadata } = photos[i];
+            const filename = `unsplash-${metadata.id}.jpg`;
+            const file = new File([blob], filename, { type: 'image/jpeg' });
+            const asset = await saveAsset(file);
+            const blobUrl = URL.createObjectURL(file);
+
+            photoAssets.push(asset);
+            assets = [...assets, asset];
+
+            // Set blob URL for the first photo (to return to chat panel)
+            if (i === 0 && !generatedAudio) {
+              generatedAudio = { asset, blobUrl };
+            }
+          }
+
+          messages = [
+            ...messages,
+            {
+              id: `system-${Date.now()}`,
+              role: 'assistant',
+              content: `✓ Found ${photos.length} stock photos for "${query}". Photos saved as assets. You can add them to the timeline as an ImageSlideshow.`,
+              timestamp: Date.now(),
+            },
+          ];
+
+          console.log('[StockImages] Successfully fetched', photos.length, 'photos');
+        } else {
+          messages = [
+            ...messages,
+            {
+              id: `system-${Date.now()}`,
+              role: 'assistant',
+              content: `⚠️ Could not find stock images for "${query}"`,
+              timestamp: Date.now(),
+            },
+          ];
+        }
+      } catch (error) {
+        console.error('[StockImages] Failed:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+
+        messages = [
+          ...messages,
+          {
+            id: `system-${Date.now()}`,
+            role: 'assistant',
+            content: `⚠️ Failed to fetch stock images: ${errorMsg}. Please add an Unsplash API key in settings.`,
+            timestamp: Date.now(),
+          },
+        ];
+      }
+    } else {
+      console.log('[StockImages] No Unsplash API key found');
+
+      messages = [
+        ...messages,
+        {
+          id: `system-${Date.now()}`,
+          role: 'assistant',
+          content: `Stock images require an Unsplash API key. Please add one in the settings.`,
+          timestamp: Date.now(),
+        },
+      ];
+    }
+  }
+
   // Call normal chat with potentially updated assets and spec
   const result = await chatEditSpec(messages, updatedSpec, assets, config);
 
@@ -598,6 +681,51 @@ export function extractMusicDescription(message: string): string {
   }
 
   return description;
+}
+
+/**
+ * Helper to detect if user is requesting stock images
+ */
+export function isStockImageRequest(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+
+  const stockKeywords = /\b(stock|images?|photos?|pictures?)\b/i.test(message);
+  const addKeywords = /\b(add|get|fetch|find|show|include)\b/i.test(message);
+
+  // Check for patterns like "add images of X" or "stock photos of Y"
+  const hasImagePattern = /(?:images?|photos?|pictures?)\s+(?:of|about|showing|with)/i.test(message);
+
+  return (stockKeywords && addKeywords) || hasImagePattern;
+}
+
+/**
+ * Extract search query from stock image request
+ */
+export function extractStockImageQuery(message: string): string {
+  // Try to extract what comes after "of" or "about"
+  const ofMatch = message.match(/(?:images?|photos?|pictures?)\s+(?:of|about|showing)\s+([^.,;!?]+)/i);
+  if (ofMatch) {
+    return ofMatch[1].trim();
+  }
+
+  // Try to extract quoted text
+  const quotedMatch = message.match(/"([^"]+)"|'([^']+)'/);
+  if (quotedMatch) {
+    return (quotedMatch[1] || quotedMatch[2]).trim();
+  }
+
+  // Remove common action words and return what's left
+  let query = message
+    .replace(/^(?:add|get|fetch|find|show|include|give me|i want|i need)\s+/i, '')
+    .replace(/^(?:some |a few |several )?(?:stock )?(?:images?|photos?|pictures?)\s+(?:of |about |showing )?/i, '')
+    .trim();
+
+  // If we removed too much, use original
+  if (query.length < 3) {
+    query = message;
+  }
+
+  return query;
 }
 
 /**

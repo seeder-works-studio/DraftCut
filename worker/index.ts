@@ -190,46 +190,93 @@ async function handleProxyImage(reqUrl: URL): Promise<Response> {
 
   console.log('[Proxy] Fetching:', targetUrl);
 
-  try {
-    const res = await fetch(targetUrl, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept: 'image/*,audio/*,*/*',
-        Referer: 'https://www.jamendo.com/',
-      },
-      signal: AbortSignal.timeout(60000), // Increased timeout for audio files
-    });
+  // Retry logic with exponential backoff
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-    console.log('[Proxy] Response status:', res.status);
-    console.log('[Proxy] Response headers:', Object.fromEntries(res.headers.entries()));
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Extract domain for appropriate Referer
+      let referer = 'https://www.google.com/';
+      try {
+        const urlObj = new URL(targetUrl);
+        referer = `${urlObj.protocol}//${urlObj.host}/`;
+      } catch {
+        // Use default referer if URL parsing fails
+      }
 
-    if (!res.ok) {
-      console.error('[Proxy] Upstream error:', res.status, res.statusText);
-      return Response.json(
-        {
-          error: `Upstream error: ${res.status} ${res.statusText}`,
-          url: targetUrl
+      const res = await fetch(targetUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'image/*,audio/*,video/*,*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          Referer: referer,
+          'Cache-Control': 'no-cache',
         },
-        { status: 502 }
-      );
+        signal: AbortSignal.timeout(60000), // 60 second timeout
+      });
+
+      console.log(`[Proxy] Attempt ${attempt}/${maxRetries} - Status:`, res.status);
+
+      if (!res.ok) {
+        // Some servers return 403 for direct access but work on retry
+        if (res.status === 403 && attempt < maxRetries) {
+          console.log('[Proxy] Got 403, retrying with delay...');
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+
+        console.error('[Proxy] Upstream error:', res.status, res.statusText);
+        return Response.json(
+          {
+            error: `Upstream error: ${res.status} ${res.statusText}`,
+            url: targetUrl,
+            attempt,
+          },
+          { status: 502 }
+        );
+      }
+
+      const contentType = res.headers.get('content-type') || 'application/octet-stream';
+      const buffer = await res.arrayBuffer();
+
+      console.log('[Proxy] Successfully proxied:', buffer.byteLength, 'bytes');
+
+      return new Response(buffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': String(buffer.byteLength),
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      });
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error('Unknown error');
+      console.error(`[Proxy] Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+
+      // Retry on network errors
+      if (attempt < maxRetries) {
+        const delay = 1000 * attempt; // Exponential backoff: 1s, 2s, 3s
+        console.log(`[Proxy] Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
     }
-
-    const contentType = res.headers.get('content-type') || 'application/octet-stream';
-    const buffer = await res.arrayBuffer();
-
-    console.log('[Proxy] Successfully proxied:', buffer.byteLength, 'bytes');
-
-    return new Response(buffer, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=3600',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Proxy fetch failed';
-    console.error('[Proxy] Error:', message);
-    return Response.json({ error: message, url: targetUrl }, { status: 500 });
   }
+
+  // All retries failed
+  const message = lastError?.message || 'Proxy fetch failed after retries';
+  console.error('[Proxy] All retries failed:', message);
+  return Response.json(
+    {
+      error: message,
+      url: targetUrl,
+      retries: maxRetries,
+    },
+    { status: 500 }
+  );
 }
