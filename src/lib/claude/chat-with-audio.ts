@@ -430,56 +430,130 @@ export async function chatEditSpecWithAudio(
 
     if (url) {
       try {
-        console.log('[Website] Fetching logo from:', url);
+        console.log('[Brand] Fetching brand assets from:', url);
 
-        const websiteData = await processWebsiteUrl(url);
+        let logoFile: File | undefined;
+        let brandColors: string[] | undefined;
+        let brandName: string | undefined;
+        let fetchMethod: string = 'Unknown';
 
-        if (websiteData.images.length > 0) {
-          // Use the first image as the logo (processWebsiteUrl returns best images first)
-          const logoFile = websiteData.images[0];
-          const asset = await saveAsset(logoFile);
-          const blobUrl = URL.createObjectURL(logoFile);
+        // Check if it's a direct image URL
+        const isDirectImage = url.match(/\.(jpg|jpeg|png|gif|svg|webp|ico)(\?|$)/i);
 
-          generatedAudio = { asset, blobUrl }; // Reuse generatedAudio to pass logo back
-          assets = [...assets, asset];
+        // Try Brandfetch first (for domain URLs, not direct images)
+        const brandfetchKey = await loadAPIKey('brandfetch');
 
-          // Update brand kit with logo
-          updatedSpec = {
-            ...updatedSpec,
-            brandKit: {
-              ...updatedSpec.brandKit,
-              logoAssetId: asset.id,
-            },
-            metadata: {
-              ...updatedSpec.metadata,
-              modified: new Date().toISOString(),
-            },
-          };
+        if (!isDirectImage && brandfetchKey) {
+          try {
+            console.log('[Brandfetch] Fetching brand data...');
+            const { getBrandfetchBrand, getBestLogo, getBrandColors, downloadBrandfetchLogo } = await import('@/lib/ai/brandfetch');
 
-          messages = [
-            ...messages,
-            {
-              id: `system-${Date.now()}`,
-              role: 'assistant',
-              content: `✓ Fetched logo from ${new URL(url).hostname} and added to brand kit`,
-              timestamp: Date.now(),
-            },
-          ];
+            const brandData = await getBrandfetchBrand(url, brandfetchKey);
+            const logoUrl = getBestLogo(brandData);
 
-          console.log('[Website] Logo fetched and added to brand kit');
-        } else {
-          messages = [
-            ...messages,
-            {
-              id: `system-${Date.now()}`,
-              role: 'assistant',
-              content: `⚠️ Could not find any images on ${new URL(url).hostname}`,
-              timestamp: Date.now(),
-            },
-          ];
+            if (!logoUrl) {
+              throw new Error('No logo found in brand data');
+            }
+
+            console.log('[Brandfetch] Downloading logo:', logoUrl);
+            const logoBlob = await downloadBrandfetchLogo(logoUrl);
+
+            const ext = logoUrl.match(/\.(svg|png|jpg|jpeg)/i)?.[1] || 'png';
+            const filename = `${brandData.domain.replace(/\./g, '-')}-logo.${ext}`;
+            logoFile = new File([logoBlob], filename, {
+              type: logoBlob.type || `image/${ext}`
+            });
+
+            brandColors = getBrandColors(brandData);
+            brandName = brandData.name;
+            fetchMethod = 'Brandfetch';
+
+            console.log('[Brandfetch] Brand data:', {
+              name: brandName,
+              colors: brandColors,
+              logo: filename,
+            });
+          } catch (brandfetchError) {
+            console.warn('[Brandfetch] Failed, trying fallback:', brandfetchError);
+            // Continue to fallback methods - don't re-throw
+          }
         }
+
+        // Fallback 1: Direct image download
+        if (!logoFile && isDirectImage) {
+          console.log('[Image] Direct image URL detected, downloading...');
+          const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
+          const response = await fetch(proxyUrl);
+
+          if (!response.ok) {
+            throw new Error(`Failed to download image: ${response.status}`);
+          }
+
+          const blob = await response.blob();
+          const ext = url.match(/\.(jpg|jpeg|png|gif|svg|webp|ico)/i)?.[1] || 'png';
+          const filename = `image-${Date.now()}.${ext}`;
+          logoFile = new File([blob], filename, { type: blob.type || `image/${ext}` });
+          fetchMethod = 'Direct download';
+        }
+
+        // Fallback 2: Web scraping
+        if (!logoFile) {
+          console.log('[Website] Scraping webpage for logo...');
+          const websiteData = await processWebsiteUrl(url);
+
+          if (websiteData.images.length === 0) {
+            throw new Error('No images found on page');
+          }
+
+          logoFile = websiteData.images[0];
+          brandColors = websiteData.colors;
+          fetchMethod = 'Web scraping';
+        }
+
+        // Ensure we have a logo file
+        if (!logoFile) {
+          throw new Error('Failed to fetch logo from all sources');
+        }
+
+        const asset = await saveAsset(logoFile);
+        const blobUrl = URL.createObjectURL(logoFile);
+
+        generatedAudio = { asset, blobUrl }; // Reuse generatedAudio to pass logo back
+        assets = [...assets, asset];
+
+        // Update brand kit with logo and colors
+        updatedSpec = {
+          ...updatedSpec,
+          brandKit: {
+            ...updatedSpec.brandKit,
+            logoAssetId: asset.id,
+            primaryColor: brandColors?.[0] || updatedSpec.brandKit?.primaryColor,
+            secondaryColor: brandColors?.[1] || updatedSpec.brandKit?.secondaryColor,
+          },
+          metadata: {
+            ...updatedSpec.metadata,
+            modified: new Date().toISOString(),
+          },
+        };
+
+        const hostname = new URL(url).hostname;
+        const successMsg = brandName
+          ? `✓ Fetched ${brandName} brand assets via ${fetchMethod}${brandColors ? ` (${brandColors.length} colors)` : ''}`
+          : `✓ Fetched image from ${hostname} via ${fetchMethod}`;
+
+        messages = [
+          ...messages,
+          {
+            id: `system-${Date.now()}`,
+            role: 'assistant',
+            content: successMsg,
+            timestamp: Date.now(),
+          },
+        ];
+
+        console.log('[Brand] Assets fetched and added to brand kit');
       } catch (error) {
-        console.error('[Website] Logo fetch failed:', error);
+        console.error('[Brand] Fetch failed:', error);
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
 
         messages = [
@@ -487,7 +561,7 @@ export async function chatEditSpecWithAudio(
           {
             id: `system-${Date.now()}`,
             role: 'assistant',
-            content: `⚠️ Failed to fetch logo: ${errorMsg}`,
+            content: `⚠️ Failed to fetch brand assets: ${errorMsg}`,
             timestamp: Date.now(),
           },
         ];
@@ -734,6 +808,21 @@ export function extractStockImageQuery(message: string): string {
 export function isLogoFetchRequest(message: string): boolean {
   const lowerMessage = message.toLowerCase();
 
+  // Check if message is JUST a URL (or URL with minimal text)
+  const urlOnlyMatch = message.trim().match(/^(https?:\/\/[^\s]+)$/i);
+  if (urlOnlyMatch) {
+    // If it's a direct image URL, fetch it
+    const url = urlOnlyMatch[1].toLowerCase();
+    if (
+      url.match(/\.(jpg|jpeg|png|gif|svg|webp|ico)(\?|$)/i) ||
+      url.includes('/logo') ||
+      url.includes('/icon') ||
+      url.includes('image')
+    ) {
+      return true;
+    }
+  }
+
   // Check for logo/image fetch keywords + URL/domain
   const hasLogoKeyword = /\b(logo|image|icon|branding)\b/i.test(message);
   const hasGetKeyword = /\b(get|fetch|grab|download|find|add)\b/i.test(message);
@@ -749,7 +838,10 @@ export function extractUrlFromMessage(message: string): string | null {
   // Match full URLs
   const fullUrlMatch = message.match(/https?:\/\/[^\s]+/i);
   if (fullUrlMatch) {
-    return fullUrlMatch[0].replace(/[.,;!?]$/, ''); // Remove trailing punctuation
+    let url = fullUrlMatch[0];
+    // Remove trailing punctuation
+    url = url.replace(/[.,;!?]+$/, '');
+    return url;
   }
 
   // Match domain-only (e.g., "nba.com")

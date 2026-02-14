@@ -17,6 +17,22 @@ interface MediaService {
 
 export const MEDIA_SERVICES: MediaService[] = [
   {
+    id: 'brandfetch',
+    name: 'Brandfetch',
+    letter: 'Bf',
+    description: 'Brand logos, colors & assets',
+    placeholder: 'Enter Brandfetch API key...',
+    signupUrl: 'https://developers.brandfetch.com/register',
+  },
+  {
+    id: 'unsplash',
+    name: 'Unsplash',
+    letter: 'U',
+    description: 'Stock photos (high quality)',
+    placeholder: 'Enter Unsplash Access Key...',
+    signupUrl: 'https://unsplash.com/developers',
+  },
+  {
     id: 'gemini-video',
     name: 'Gemini Video',
     letter: 'G',

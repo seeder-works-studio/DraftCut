@@ -16,6 +16,7 @@ import { useChatStore, type ChatMessage } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
 import { chatEditSpecWithAudio } from '@/lib/claude/chat-with-audio';
 import { saveAPIKey, loadAPIKey, loadSetting, saveSetting } from '@/lib/storage/api-keys';
+import { saveAsset } from '@/lib/storage/assets';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
 import { toast } from 'sonner';
 
@@ -73,7 +74,9 @@ export function ChatPanel() {
   const [input, setInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load AI config from IndexedDB on mount
   useEffect(() => {
@@ -179,6 +182,62 @@ export function ChatPanel() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !spec) return;
+
+    setIsUploading(true);
+
+    try {
+      for (const file of Array.from(files)) {
+        // Validate file type
+        const isVideo = file.type.startsWith('video/');
+        const isAudio = file.type.startsWith('audio/');
+        const isImage = file.type.startsWith('image/');
+
+        if (!isVideo && !isAudio && !isImage) {
+          toast.error(`Skipping ${file.name} - not a valid media file`);
+          continue;
+        }
+
+        // Save to IndexedDB (returns Asset with metadata)
+        const asset = await saveAsset(file);
+
+        // Add to project store
+        addAsset(asset);
+
+        // Create blob URL for immediate use
+        const blobUrl = URL.createObjectURL(file);
+        setAssetBlobUrl(asset.id, blobUrl);
+
+        // Add to spec.assets if not already there
+        if (!spec.assets.find((a) => a.id === asset.id)) {
+          const updatedSpec = {
+            ...spec,
+            assets: [...spec.assets, asset],
+            metadata: {
+              ...spec.metadata,
+              modified: new Date().toISOString(),
+            },
+          };
+          setSpec(updatedSpec);
+        }
+
+        toast.success(`Uploaded ${file.name}`);
+      }
+    } catch (error) {
+      const errorText =
+        error instanceof Error ? error.message : 'Upload failed';
+      toast.error(errorText);
+    } finally {
+      setIsUploading(false);
+      // Reset file input so same file can be uploaded again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -318,7 +377,25 @@ export function ChatPanel() {
 
       {/* Input */}
       <div className="border-t px-4 py-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,audio/*"
+          multiple
+          onChange={handleFileUpload}
+          className="hidden"
+        />
         <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || !spec}
+            className="self-end shrink-0"
+            title="Upload media files"
+          >
+            {isUploading ? <SpinnerIcon /> : <PaperclipIcon />}
+          </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -415,6 +492,43 @@ function SendIcon() {
     >
       <path d="m22 2-7 20-4-9-9-4Z" />
       <path d="M22 2 11 13" />
+    </svg>
+  );
+}
+
+function PaperclipIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="animate-spin"
+    >
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
   );
 }

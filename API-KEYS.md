@@ -16,6 +16,8 @@ All keys are stored locally in your browser (IndexedDB). Nothing is sent to any 
 
 | Service | Get Key | Used For |
 |---------|---------|----------|
+| **Brandfetch** | https://developers.brandfetch.com/register | **Brand logos, colors & fonts (recommended for brand videos)** |
+| **Unsplash** | https://unsplash.com/developers | **High-quality stock photos (free tier)** |
 | **Jamendo** | https://developer.jamendo.com/v3.0 | **Free stock music (recommended - instant & free, Client ID only)** |
 | Pixabay | https://pixabay.com/api/docs/ | Stock images, videos & sound effects |
 | ElevenLabs | https://elevenlabs.io/app/settings/api-keys | Voice narration & AI sound effects |
