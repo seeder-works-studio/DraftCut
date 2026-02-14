@@ -854,6 +854,16 @@ export function isLogoFetchRequest(message: string): boolean {
   const hasGetKeyword = /\b(get|fetch|grab|download|find|add)\b/i.test(message);
   const hasUrl = /\b(https?:\/\/[^\s]+|[\w-]+\.(com|org|net|ai|io|co|dev|app|tech))\b/i.test(message);
 
+  // 5. Check for common brand names (suggest domain)
+  const brandMentions = /\b(claude|anthropic|google|microsoft|apple|meta|amazon|nike|nba|spotify|netflix|twitter|facebook)\b/i.test(lowerMessage);
+
+  if ((hasLogoKeyword || hasGetKeyword) && brandMentions && !hasUrl) {
+    // User mentioned a brand but no URL - this will be caught by chat system
+    // to suggest providing the domain
+    console.log('[Logo Detection] Brand mentioned but no domain provided:', message);
+    return false; // Let AI handle it by asking for domain
+  }
+
   return (hasLogoKeyword || hasGetKeyword) && hasUrl;
 }
 
