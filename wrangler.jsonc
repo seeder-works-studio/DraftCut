@@ -1,5 +1,6 @@
 {
   "name": "draftcut",
+  "account_id": "9af5a5b94e44cd069b29493959d70e56",
   "main": "./worker/index.ts",
   "compatibility_date": "2026-02-12",
   "compatibility_flags": ["nodejs_compat"],
