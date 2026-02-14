@@ -90,20 +90,22 @@ export const ImageSlideshow: React.FC<ImageSlideshowProps> = ({
         let opacity = 1;
 
         // Fade in at start (if first slide or during transition)
-        if (index === 0 && slideFrame < transitionDuration) {
+        if (index === 0 && slideFrame >= 0 && slideFrame < transitionDuration) {
           const fadeTransition = crossFade({
-            frame: slideFrame,
+            frame: Math.max(0, slideFrame),
             fps,
             durationInFrames: transitionDuration,
           });
           opacity = fadeTransition.inOpacity;
         }
         // Fade out at end (if not last slide)
-        else if (index < slides.length - 1) {
+        else if (index < slides.length - 1 && slideFrame >= 0) {
           const remainingFrames = slideDurationInFrames - slideFrame;
-          if (remainingFrames < transitionDuration) {
+          if (remainingFrames >= 0 && remainingFrames < transitionDuration) {
+            // Calculate fade-out progress (0 = start fading, transitionDuration = fully faded)
+            const fadeOutProgress = transitionDuration - remainingFrames;
             const fadeTransition = crossFade({
-              frame: transitionDuration - remainingFrames,
+              frame: Math.max(0, fadeOutProgress),
               fps,
               durationInFrames: transitionDuration,
             });
