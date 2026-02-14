@@ -150,3 +150,45 @@ export function analyzeLogoLightness(logoColors: string[]): 'light' | 'dark' | '
   if (avgLuminance < 0.4) return 'dark';
   return 'mixed';
 }
+
+/**
+ * Ensure text color has sufficient contrast against background
+ * Returns the provided textColor if it has good contrast (>= 4.5:1),
+ * otherwise returns black or white depending on which has better contrast
+ *
+ * @param backgroundColor - Background color in hex format
+ * @param textColor - Desired text color in hex format
+ * @param minContrast - Minimum contrast ratio (default 4.5 for WCAG AA)
+ * @returns Text color with guaranteed contrast
+ */
+export function ensureTextContrast(
+  backgroundColor: string,
+  textColor: string,
+  minContrast: number = 4.5
+): string {
+  // Check current contrast
+  const currentContrast = getContrastRatio(backgroundColor, textColor);
+
+  // If contrast is good enough, use the provided color
+  if (currentContrast >= minContrast) {
+    return textColor;
+  }
+
+  // Otherwise, choose black or white based on which has better contrast
+  const bgLuminance = getLuminance(backgroundColor);
+
+  // Light backgrounds need dark text, dark backgrounds need light text
+  return bgLuminance > 0.5 ? '#000000' : '#ffffff';
+}
+
+/**
+ * Get the best contrasting text color for a background
+ * Returns either black or white, whichever has better contrast
+ *
+ * @param backgroundColor - Background color in hex format
+ * @returns Either '#000000' or '#ffffff'
+ */
+export function getContrastingTextColor(backgroundColor: string): string {
+  const bgLuminance = getLuminance(backgroundColor);
+  return bgLuminance > 0.5 ? '#000000' : '#ffffff';
+}

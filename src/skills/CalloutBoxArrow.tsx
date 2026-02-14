@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, AbsoluteFill } from 'remotion';
+import { ensureTextContrast } from '@/lib/utils/color-extraction';
 
 export interface CalloutBoxArrowProps {
   text?: string;
@@ -26,6 +27,9 @@ export const CalloutBoxArrow: React.FC<CalloutBoxArrowProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+
+  // Ensure text color has sufficient contrast against fill background
+  const adjustedTextColor = ensureTextContrast(fillColor, strokeColor);
 
   const fadeIn = spring({ frame, fps, config: { damping: 15 } });
 
@@ -114,7 +118,7 @@ export const CalloutBoxArrow: React.FC<CalloutBoxArrowProps> = ({
             y={boxY + boxHeight / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            fill={strokeColor}
+            fill={adjustedTextColor}
             fontSize={20}
             fontFamily="sans-serif"
           >

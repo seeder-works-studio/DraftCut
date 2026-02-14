@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, AbsoluteFill, interpolate, Img } from 'remotion';
+import { ensureTextContrast } from '@/lib/utils/color-extraction';
 
 export interface OutroCTAProps {
   heading: string;
@@ -26,6 +27,10 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+
+  // Ensure text colors have sufficient contrast
+  const adjustedTextColor = ensureTextContrast(backgroundColor, textColor);
+  const adjustedButtonTextColor = ensureTextContrast(buttonColor, buttonTextColor);
 
   // Enhanced animations
   const headingProgress = spring({ frame, fps, config: { damping: 15, stiffness: 100 } });
@@ -92,7 +97,7 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
         style={{
           fontSize: 84,
           fontWeight: 'bold',
-          color: textColor,
+          color: adjustedTextColor,
           transform: `translateY(${headingY}px)`,
           opacity: headingOpacity,
           textAlign: 'center',
@@ -131,7 +136,7 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
           style={{
             position: 'relative',
             backgroundColor: buttonColor,
-            color: buttonTextColor,
+            color: adjustedButtonTextColor,
             padding: '24px 72px',
             fontSize: 42,
             fontWeight: 'bold',
@@ -163,7 +168,7 @@ export const OutroCTA: React.FC<OutroCTAProps> = ({
         <p
           style={{
             fontSize: 24,
-            color: textColor,
+            color: adjustedTextColor,
             marginTop: 30,
             opacity: interpolate(buttonProgress, [0, 1], [0, 0.7]),
           }}

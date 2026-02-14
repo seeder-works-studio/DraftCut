@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, AbsoluteFill, interpolate, Img } from 'remotion';
+import { ensureTextContrast } from '@/lib/utils/color-extraction';
 
 export interface IntroTitleCardProps {
   title: string;
@@ -24,6 +25,10 @@ export const IntroTitleCard: React.FC<IntroTitleCardProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
+
+  // Ensure text colors have sufficient contrast against background
+  const adjustedTitleColor = ensureTextContrast(backgroundColor, titleColor);
+  const adjustedSubtitleColor = ensureTextContrast(backgroundColor, subtitleColor);
 
   // Enhanced entrance animations
   const titleProgress = spring({ frame, fps, config: { damping: 15, stiffness: 100 } });
@@ -114,7 +119,7 @@ export const IntroTitleCard: React.FC<IntroTitleCardProps> = ({
         style={{
           fontSize: 108,
           fontWeight: 900,
-          color: titleColor,
+          color: adjustedTitleColor,
           transform: `translateY(${titleY}px) scale(${titleScale * pulseIntensity * exitScale})`,
           opacity: titleOpacity,
           textAlign: 'center',
@@ -146,7 +151,7 @@ export const IntroTitleCard: React.FC<IntroTitleCardProps> = ({
         <h2
           style={{
             fontSize: 56,
-            color: subtitleColor,
+            color: adjustedSubtitleColor,
             opacity: subtitleOpacity,
             transform: `translateY(${subtitleY}px) scale(${exitScale})`,
             textAlign: 'center',

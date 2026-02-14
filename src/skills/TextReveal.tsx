@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, AbsoluteFill, interpolate, spring } from 'remotion';
+import { ensureTextContrast } from '@/lib/utils/color-extraction';
 
 export type RevealStyle = 'typewriter' | 'fadeIn' | 'slideUp' | 'wordPop' | 'glitch';
 
@@ -26,6 +27,11 @@ export const TextReveal: React.FC<TextRevealProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
+
+  // Ensure text color has sufficient contrast if background is not transparent
+  const adjustedColor = backgroundColor !== 'transparent'
+    ? ensureTextContrast(backgroundColor, color)
+    : color;
 
   const renderTypewriter = () => {
     const charsToShow = Math.floor(
@@ -188,7 +194,7 @@ export const TextReveal: React.FC<TextRevealProps> = ({
         style={{
           fontSize,
           fontFamily,
-          color,
+          color: adjustedColor,
           fontWeight: 'bold',
           textAlign,
           maxWidth: '90%',

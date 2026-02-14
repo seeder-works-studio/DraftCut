@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, AbsoluteFill } from 'remotion';
+import { ensureTextContrast } from '@/lib/utils/color-extraction';
 
 export interface LowerThirdProps {
   name: string;
@@ -18,6 +19,9 @@ export const LowerThird: React.FC<LowerThirdProps> = ({
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
+
+  // Ensure text color has sufficient contrast
+  const adjustedTextColor = ensureTextContrast(backgroundColor, textColor);
 
   const slideIn = spring({ frame, fps, config: { damping: 18 } });
   const slideOut = spring({
@@ -53,10 +57,10 @@ export const LowerThird: React.FC<LowerThirdProps> = ({
           borderRadius: 8,
         }}
       >
-        <div style={{ color: textColor, fontSize: 32, fontWeight: 'bold' }}>
+        <div style={{ color: adjustedTextColor, fontSize: 32, fontWeight: 'bold' }}>
           {name}
         </div>
-        <div style={{ color: textColor, fontSize: 24, opacity: 0.8 }}>
+        <div style={{ color: adjustedTextColor, fontSize: 24, opacity: 0.8 }}>
           {title}
         </div>
       </div>

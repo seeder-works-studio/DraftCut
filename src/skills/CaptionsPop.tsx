@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCurrentFrame, useVideoConfig, spring, AbsoluteFill } from 'remotion';
+import { ensureTextContrast } from '@/lib/utils/color-extraction';
 
 export interface Caption {
   text: string;
@@ -28,6 +29,9 @@ export const CaptionsPop: React.FC<CaptionsPopProps> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const time = frame / fps;
+
+  // Ensure text color has sufficient contrast if background is provided
+  const adjustedColor = backgroundColor ? ensureTextContrast(backgroundColor, color) : color;
 
   const activeCaption = captions.find(
     (cap) => time >= cap.startTime && time < cap.startTime + cap.duration
@@ -84,7 +88,7 @@ export const CaptionsPop: React.FC<CaptionsPopProps> = ({
                 fontSize,
                 fontFamily,
                 fontWeight: isEmphasized || isActive ? 'bold' : 'normal',
-                color: isActive ? '#FFD700' : color,
+                color: isActive ? '#FFD700' : adjustedColor,
                 backgroundColor: backgroundColor || 'transparent',
                 padding: '5px 10px',
                 borderRadius: 4,
