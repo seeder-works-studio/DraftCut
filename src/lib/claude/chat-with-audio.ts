@@ -806,12 +806,12 @@ export function extractStockImageQuery(message: string): string {
  * Helper to detect if user is requesting a logo from a website
  */
 export function isLogoFetchRequest(message: string): boolean {
-  const lowerMessage = message.toLowerCase();
+  const trimmed = message.trim();
+  const lowerMessage = trimmed.toLowerCase();
 
-  // Check if message is JUST a URL (or URL with minimal text)
-  const urlOnlyMatch = message.trim().match(/^(https?:\/\/[^\s]+)$/i);
+  // 1. Check if message is JUST a URL with image extension
+  const urlOnlyMatch = trimmed.match(/^(https?:\/\/[^\s]+)$/i);
   if (urlOnlyMatch) {
-    // If it's a direct image URL, fetch it
     const url = urlOnlyMatch[1].toLowerCase();
     if (
       url.match(/\.(jpg|jpeg|png|gif|svg|webp|ico)(\?|$)/i) ||
@@ -823,10 +823,22 @@ export function isLogoFetchRequest(message: string): boolean {
     }
   }
 
-  // Check for logo/image fetch keywords + URL/domain
+  // 2. Check if message is JUST a domain (e.g., "nba.com", "claude.ai")
+  const domainOnlyMatch = trimmed.match(/^([\w-]+\.(com|org|net|ai|io|co|dev|app|tech))\s*$/i);
+  if (domainOnlyMatch) {
+    return true;
+  }
+
+  // 3. Check if message is a full URL to a domain (e.g., "https://nba.com")
+  const fullDomainMatch = trimmed.match(/^https?:\/\/([\w-]+\.(com|org|net|ai|io|co|dev|app|tech))\/?$/i);
+  if (fullDomainMatch) {
+    return true;
+  }
+
+  // 4. Check for logo/image fetch keywords + URL/domain
   const hasLogoKeyword = /\b(logo|image|icon|branding)\b/i.test(message);
   const hasGetKeyword = /\b(get|fetch|grab|download|find|add)\b/i.test(message);
-  const hasUrl = /\b(https?:\/\/[^\s]+|[\w-]+\.com|[\w-]+\.org|[\w-]+\.net)\b/i.test(message);
+  const hasUrl = /\b(https?:\/\/[^\s]+|[\w-]+\.(com|org|net|ai|io|co|dev|app|tech))\b/i.test(message);
 
   return (hasLogoKeyword || hasGetKeyword) && hasUrl;
 }
@@ -844,8 +856,8 @@ export function extractUrlFromMessage(message: string): string | null {
     return url;
   }
 
-  // Match domain-only (e.g., "nba.com")
-  const domainMatch = message.match(/\b([\w-]+\.(?:com|org|net|io|co))\b/i);
+  // Match domain-only (e.g., "nba.com", "claude.ai")
+  const domainMatch = message.match(/\b([\w-]+\.(?:com|org|net|io|co|ai|dev|app|tech))\b/i);
   if (domainMatch) {
     return `https://${domainMatch[1]}`;
   }
