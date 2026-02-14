@@ -100,7 +100,7 @@ export async function downloadJamendoTrack(audioUrl: string): Promise<Blob> {
 
     console.warn('[Jamendo] Direct download failed:', response.status);
   } catch (directError) {
-    console.warn('[Jamendo] Direct download error:', directError);
+    console.log('[Jamendo] Direct download error:', directError);
   }
 
   // Fallback to proxy
@@ -110,7 +110,15 @@ export async function downloadJamendoTrack(audioUrl: string): Promise<Blob> {
   const response = await fetch(proxyUrl);
 
   if (!response.ok) {
-    throw new Error(`Failed to download Jamendo track via proxy: ${response.status}`);
+    // Try to get error details from response
+    let errorDetail = `${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorDetail = errorData.error || errorDetail;
+    } catch {
+      // Ignore JSON parse errors
+    }
+    throw new Error(`Failed to download Jamendo track via proxy: ${errorDetail}`);
   }
 
   console.log('[Jamendo] Proxy download successful');
@@ -148,11 +156,11 @@ export async function getJamendoMusic(
     audiodownload: track.audiodownload,
   });
 
-  // Use audiodownload URL (simpler, no auth tokens in query params)
-  // The audio URL has session tokens that may not work through proxy
-  let audioUrl = track.audiodownload || track.audio;
+  // Try streaming URL first (has auth tokens but works better with proxy)
+  // Then fall back to download URL if streaming fails
+  let audioUrl = track.audio || track.audiodownload;
 
-  // Ensure URL doesn't have trailing slash (can cause issues)
+  // Clean up URL
   if (audioUrl.endsWith('/')) {
     audioUrl = audioUrl.slice(0, -1);
   }
@@ -160,7 +168,23 @@ export async function getJamendoMusic(
   console.log('[Jamendo] Download URL (audiodownload):', track.audiodownload);
   console.log('[Jamendo] Streaming URL (audio):', track.audio);
   console.log('[Jamendo] Using:', audioUrl);
-  const blob = await downloadJamendoTrack(audioUrl);
+
+  try {
+    const blob = await downloadJamendoTrack(audioUrl);
+    return { blob, metadata: track };
+  } catch (error) {
+    // If streaming URL failed, try download URL
+    if (audioUrl === track.audio && track.audiodownload) {
+      console.log('[Jamendo] Streaming URL failed, trying download URL');
+      audioUrl = track.audiodownload;
+      if (audioUrl.endsWith('/')) {
+        audioUrl = audioUrl.slice(0, -1);
+      }
+      const blob = await downloadJamendoTrack(audioUrl);
+      return { blob, metadata: track };
+    }
+    throw error;
+  }
 
   return { blob, metadata: track };
 }
