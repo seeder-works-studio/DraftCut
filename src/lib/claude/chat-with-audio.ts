@@ -1094,7 +1094,7 @@ export async function chatWithAgentRouter(
           break;
         }
 
-        case 'update_spec': {
+        case 'update_video_spec': {
           const { changes } = action.params as { changes: string };
 
           // Call the regular chat system to update the spec
