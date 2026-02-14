@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { useChatStore, type ChatMessage } from '@/stores/chat-store';
 import { useProjectStore } from '@/stores/project-store';
-import { chatEditSpecWithAudio } from '@/lib/claude/chat-with-audio';
+import { chatEditSpecWithAudio, chatWithAgentRouter } from '@/lib/claude/chat-with-audio';
 import { saveAPIKey, loadAPIKey, loadSetting, saveSetting } from '@/lib/storage/api-keys';
 import { saveAsset } from '@/lib/storage/assets';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
@@ -135,7 +135,8 @@ export function ChatPanel() {
         (m) => m.id !== 'welcome'
       );
 
-      const result = await chatEditSpecWithAudio(apiMessages, spec, assets, aiConfig);
+      // Use AI agent router for intelligent request handling
+      const result = await chatWithAgentRouter(apiMessages, spec, assets, aiConfig);
 
       // If audio was generated, add it to project assets AND spec
       if (result.generatedAudio) {
