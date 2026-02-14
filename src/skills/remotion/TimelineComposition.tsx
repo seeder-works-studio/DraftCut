@@ -3,7 +3,8 @@
  */
 
 import React from 'react';
-import { AbsoluteFill, Video, Img, Audio, Sequence, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Video, Img, Sequence, useCurrentFrame } from 'remotion';
+import { Audio } from '@remotion/media';
 import type { ProjectSpec } from '@/lib/spec/types';
 import { SKILL_REGISTRY } from '@/skills/registry';
 
