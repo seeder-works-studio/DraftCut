@@ -677,9 +677,15 @@ async function renderRemotionSkillToCanvas(
             },
           })
         );
-        // Wait for render
+        // Wait for Remotion Player to fully render and animations to stabilize
+        // Remotion animations (spring, interpolate) need time to mount and execute
+        // Use multiple animation frames + timeout to ensure render is complete
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve());
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setTimeout(() => resolve(), 150);
+            });
+          });
         });
       } catch (err) {
         console.error('Error rendering Remotion Player:', err);
