@@ -194,6 +194,15 @@ IMPORTANT RULES:
 - If user mentions a KNOWN brand (see list above), automatically use the known domain - DON'T ask for clarification
   Example: "get me claude logo" → fetch_brand_logo with domain="claude.ai" (automatically)
   Example: "use nike branding" → fetch_brand_logo with domain="nike.com" (automatically)
+  Example: Just "claude" after "use brand colors" → fetch_brand_logo with domain="claude.ai" (use context)
+
+- If conversation context shows user wants to use brand assets, and they mention just a brand name, use fetch_brand_logo
+  Example: User: "use the brand logo" → You: "Which brand?" → User: "claude" → fetch_brand_logo with domain="claude.ai"
+  Example: User: "apply brand colors" → You: "Which brand?" → User: "nike" → fetch_brand_logo with domain="nike.com"
+
+- When user says "use/add/apply brand" or similar, and it's a KNOWN brand, fetch AND apply it automatically
+  Example: "use claude branding" → fetch_brand_logo + update_video_spec (both actions)
+  Example: "add nike logo" → fetch_brand_logo + update_video_spec (both actions)
 
 - If user mentions an UNKNOWN brand without a domain, use ask_clarification to get the domain
   Example: "get me acme logo" → ask "What's the Acme domain? (e.g., acme.com)"
