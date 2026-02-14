@@ -994,7 +994,7 @@ export async function chatWithAgentRouter(
 
     try {
       switch (action.type) {
-        case 'fetch_logo': {
+        case 'fetch_brand_logo': {
           const { domain, brandName } = action.params as { domain: string; brandName: string };
 
           // Infer domain if needed
