@@ -11,6 +11,16 @@ import * as fs from 'fs';
  * - No interpolation errors in console
  */
 
+// Load API keys from .env file
+const envPath = path.resolve(__dirname, '..', '.env');
+const env: Record<string, string> = {};
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const match = line.match(/^(\w+)=(.+)$/);
+    if (match) env[match[1]] = match[2].trim();
+  }
+}
+
 test.describe('ImageSlideshow', () => {
   test.beforeEach(async ({ page }) => {
     // Set longer timeout for AI generation
@@ -19,10 +29,10 @@ test.describe('ImageSlideshow', () => {
     // Navigate to home page
     await page.goto('http://localhost:3000');
 
-    // Load API key from environment
-    const claudeKey = process.env.CLAUDE_API_KEY;
+    // Get API key from .env
+    const claudeKey = env.CLAUDE_API_KEY;
     if (!claudeKey) {
-      throw new Error('CLAUDE_API_KEY environment variable not set');
+      throw new Error('CLAUDE_API_KEY not found in .env file');
     }
 
     // Open settings and configure API key
