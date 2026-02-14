@@ -22,6 +22,7 @@ import type { Asset, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
 import type { ChatMessage } from '@/stores/chat-store';
 import { loadAPIKey } from '@/lib/storage/api-keys';
+import { analyzeRequest, inferDomain } from './agent-router';
 
 interface ChatWithAudioResult {
   displayText: string;
@@ -927,4 +928,174 @@ function addAudioToSpec(spec: ProjectSpec, asset: Asset, audioDuration: number):
   spec.metadata.modified = new Date().toISOString();
 
   return spec;
+}
+
+/**
+ * Agent-powered chat that uses AI to intelligently route requests
+ * This is the next-generation version that replaces keyword matching
+ */
+export async function chatWithAgentRouter(
+  messages: ChatMessage[],
+  currentSpec: ProjectSpec,
+  currentAssets: Asset[],
+  aiConfig: AIProviderConfig
+): Promise<{
+  displayText: string;
+  spec: ProjectSpec | null;
+  generatedAudio: { asset: Asset; blobUrl: string } | null;
+}> {
+  const lastUserMessage = messages[messages.length - 1]?.content || '';
+
+  console.log('[Agent Chat] Processing request:', lastUserMessage);
+
+  // Use the agent router to analyze the request
+  const plan = await analyzeRequest(lastUserMessage, aiConfig.apiKey, aiConfig.model);
+
+  console.log('[Agent Chat] Execution plan:', plan);
+
+  // If clarification is needed, return immediately
+  if (plan.needsClarification) {
+    return {
+      displayText: plan.clarificationQuestion || 'Could you please provide more details?',
+      spec: null,
+      generatedAudio: null,
+    };
+  }
+
+  // Execute actions in order
+  let updatedSpec = currentSpec;
+  let assets = [...currentAssets];
+  let generatedAudio: { asset: Asset; blobUrl: string } | null = null;
+  const actionResults: string[] = [];
+
+  for (const action of plan.actions) {
+    console.log('[Agent Chat] Executing action:', action.type, action.params);
+
+    try {
+      switch (action.type) {
+        case 'fetch_logo': {
+          const { domain, brandName } = action.params as { domain: string; brandName: string };
+
+          // Infer domain if needed
+          const actualDomain = domain || inferDomain(brandName);
+
+          if (!actualDomain) {
+            actionResults.push(`⚠️ Couldn't determine domain for "${brandName}". Please provide it (e.g., "${brandName.toLowerCase()}.com")`);
+            continue;
+          }
+
+          // Fetch via Brandfetch
+          const brandfetchKey = await loadAPIKey('brandfetch');
+
+          if (!brandfetchKey) {
+            actionResults.push('⚠️ Brandfetch API key not configured. Please add it in settings.');
+            continue;
+          }
+
+          const { getBrandfetchBrand, getBestLogo, getBrandColors, downloadBrandfetchLogo } = await import('@/lib/ai/brandfetch');
+
+          const brandData = await getBrandfetchBrand(actualDomain, brandfetchKey);
+          const logoUrl = getBestLogo(brandData);
+
+          if (!logoUrl) {
+            actionResults.push(`⚠️ No logo found for ${brandName}`);
+            continue;
+          }
+
+          const logoBlob = await downloadBrandfetchLogo(logoUrl);
+          const ext = logoUrl.match(/\.(svg|png|jpg|jpeg)/i)?.[1] || 'png';
+          const filename = `${brandData.domain.replace(/\./g, '-')}-logo.${ext}`;
+          const logoFile = new File([logoBlob], filename, {
+            type: logoBlob.type || `image/${ext}`
+          });
+
+          const asset = await saveAsset(logoFile);
+          const blobUrl = URL.createObjectURL(logoFile);
+
+          generatedAudio = { asset, blobUrl };
+          assets = [...assets, asset];
+
+          const brandColors = getBrandColors(brandData);
+
+          // Update spec with logo and colors
+          updatedSpec = {
+            ...updatedSpec,
+            assets: [...updatedSpec.assets, asset],
+            brandKit: {
+              ...updatedSpec.brandKit,
+              logoAssetId: asset.id,
+              primaryColor: brandColors?.[0] || updatedSpec.brandKit?.primaryColor,
+              secondaryColor: brandColors?.[1] || updatedSpec.brandKit?.secondaryColor,
+            },
+            metadata: {
+              ...updatedSpec.metadata,
+              modified: new Date().toISOString(),
+            },
+          };
+
+          actionResults.push(`✓ Fetched ${brandName} logo and brand colors`);
+          break;
+        }
+
+        case 'fetch_stock_images': {
+          const { query, count = 5 } = action.params as { query: string; count?: number };
+
+          const unsplashKey = await loadAPIKey('unsplash');
+
+          if (!unsplashKey) {
+            actionResults.push('⚠️ Unsplash API key not configured. Please add it in settings.');
+            continue;
+          }
+
+          const photos = await getUnsplashPhotos(query, unsplashKey, count);
+
+          for (let i = 0; i < photos.length; i++) {
+            const { blob, metadata } = photos[i];
+            const filename = `unsplash-${metadata.id}.jpg`;
+            const file = new File([blob], filename, { type: 'image/jpeg' });
+            const asset = await saveAsset(file);
+            const assetBlobUrl = URL.createObjectURL(file);
+
+            assets = [...assets, asset];
+
+            if (i === 0 && !generatedAudio) {
+              generatedAudio = { asset, blobUrl: assetBlobUrl };
+            }
+          }
+
+          actionResults.push(`✓ Fetched ${photos.length} stock photos for "${query}"`);
+          break;
+        }
+
+        case 'update_spec': {
+          const { changes } = action.params as { changes: string };
+
+          // Call the regular chat system to update the spec
+          const result = await chatEditSpec(messages, updatedSpec, assets, aiConfig);
+
+          if (result.spec) {
+            updatedSpec = result.spec;
+            actionResults.push('✓ Updated video');
+          }
+
+          break;
+        }
+
+        // Add other action types as needed (music, voice, etc.)
+
+        default:
+          console.warn('[Agent Chat] Unknown action type:', action.type);
+      }
+    } catch (error) {
+      console.error('[Agent Chat] Action failed:', action.type, error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      actionResults.push(`❌ ${action.type} failed: ${errorMsg}`);
+    }
+  }
+
+  return {
+    displayText: actionResults.join('\n'),
+    spec: updatedSpec,
+    generatedAudio,
+  };
 }
