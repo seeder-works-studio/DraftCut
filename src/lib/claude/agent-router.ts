@@ -7,7 +7,7 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 
 export interface AgentAction {
-  type: 'fetch_brand_logo' | 'fetch_stock_images' | 'generate_music' | 'generate_voice' | 'generate_sfx' | 'update_video_spec' | 'ask_clarification';
+  type: 'fetch_brand_logo' | 'fetch_stock_images' | 'generate_music' | 'generate_voice_narration' | 'generate_sound_effect' | 'update_video_spec' | 'ask_clarification';
   params: Record<string, unknown>;
   reason: string;
 }

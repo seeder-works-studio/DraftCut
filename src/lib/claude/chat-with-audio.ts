@@ -1108,7 +1108,209 @@ export async function chatWithAgentRouter(
           break;
         }
 
-        // Add other action types as needed (music, voice, etc.)
+        case 'generate_music': {
+          const { description, duration } = action.params as { description: string; duration?: number };
+
+          console.log('[Agent Music] Generating music:', description);
+
+          // Try Jamendo first (instant, free stock music)
+          const jamendoKey = await loadAPIKey('jamendo');
+          const beatovenKey = await loadAPIKey('beatoven');
+          const replicateKey = await loadAPIKey('replicate');
+
+          console.log('[Agent Music] Available keys:', {
+            jamendo: !!jamendoKey,
+            beatoven: !!beatovenKey,
+            replicate: !!replicateKey,
+          });
+
+          let musicGenerated = false;
+
+          // Try Jamendo first
+          if (jamendoKey && !musicGenerated) {
+            try {
+              console.log('[Jamendo] Searching for music');
+              const { blob, metadata } = await getJamendoMusic(description, jamendoKey, duration);
+
+              const filename = `jamendo-${metadata.id}.mp3`;
+              const audioFile = new File([blob], filename, { type: 'audio/mpeg' });
+              const asset = await saveAsset(audioFile);
+              const blobUrl = URL.createObjectURL(audioFile);
+
+              generatedAudio = { asset, blobUrl };
+              assets = [...assets, asset];
+
+              // Add audio to spec
+              updatedSpec = addAudioToSpec(updatedSpec, asset, metadata.duration);
+
+              actionResults.push(`✓ Added music: "${metadata.name}" by ${metadata.artist_name} (${metadata.duration}s)`);
+              musicGenerated = true;
+            } catch (error) {
+              console.log('[Jamendo] Failed, trying fallback:', error);
+            }
+          }
+
+          // Fallback to Beatoven
+          if (beatovenKey && !musicGenerated) {
+            try {
+              console.log('[Beatoven] Generating music');
+              const audioBlob = await generateMusicBeatoven(description, beatovenKey);
+              const filename = `music-beatoven-${Date.now()}.mp3`;
+              const audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+              const asset = await saveAsset(audioFile);
+              const blobUrl = URL.createObjectURL(audioFile);
+
+              generatedAudio = { asset, blobUrl };
+              assets = [...assets, asset];
+
+              const musicDuration = duration || updatedSpec.canvas.duration;
+              updatedSpec = addAudioToSpec(updatedSpec, asset, musicDuration);
+
+              actionResults.push(`✓ Generated music with Beatoven (${musicDuration}s)`);
+              musicGenerated = true;
+            } catch (error) {
+              console.log('[Beatoven] Failed, trying Replicate:', error);
+            }
+          }
+
+          // Final fallback to Replicate
+          if (replicateKey && !musicGenerated) {
+            try {
+              console.log('[Replicate] Generating music');
+              const genDuration = duration || 20;
+              const audioBlob = await generateMusic(description, genDuration, replicateKey);
+              const filename = `music-replicate-${Date.now()}.wav`;
+              const audioFile = new File([audioBlob], filename, { type: 'audio/wav' });
+              const asset = await saveAsset(audioFile);
+              const blobUrl = URL.createObjectURL(audioFile);
+
+              generatedAudio = { asset, blobUrl };
+              assets = [...assets, asset];
+
+              updatedSpec = addAudioToSpec(updatedSpec, asset, genDuration);
+
+              actionResults.push(`✓ Generated music with Replicate (${genDuration}s)`);
+              musicGenerated = true;
+            } catch (error) {
+              console.error('[Replicate] Failed:', error);
+            }
+          }
+
+          if (!musicGenerated) {
+            actionResults.push('⚠️ Music generation failed. Please configure Jamendo, Beatoven, or Replicate API key.');
+          }
+
+          break;
+        }
+
+        case 'generate_voice': {
+          const { text, voice } = action.params as { text: string; voice?: string };
+
+          console.log('[Agent Voice] Generating narration:', text);
+
+          const elevenlabsKey = await loadAPIKey('elevenlabs');
+
+          if (!elevenlabsKey) {
+            actionResults.push('⚠️ ElevenLabs API key not configured. Please add it in settings.');
+            continue;
+          }
+
+          try {
+            console.log('[ElevenLabs] Generating voice narration');
+            const audioBlob = await generateVoiceNarration(
+              text,
+              elevenlabsKey,
+              voice || ELEVENLABS_VOICES.rachel
+            );
+            const filename = `voice-narration-${Date.now()}.mp3`;
+            const audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+            const asset = await saveAsset(audioFile);
+            const blobUrl = URL.createObjectURL(audioFile);
+
+            generatedAudio = { asset, blobUrl };
+            assets = [...assets, asset];
+
+            // Estimate duration based on text length
+            const wordCount = text.split(/\s+/).length;
+            const estimatedDuration = Math.max(wordCount / 2.5, 2);
+
+            updatedSpec = addAudioToSpec(updatedSpec, asset, estimatedDuration);
+
+            actionResults.push(`✓ Generated voice narration (${Math.round(estimatedDuration)}s)`);
+          } catch (error) {
+            console.error('[ElevenLabs] Voice generation failed:', error);
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            actionResults.push(`❌ Voice generation failed: ${errorMsg}`);
+          }
+
+          break;
+        }
+
+        case 'generate_sound_effect': {
+          const { description } = action.params as { description: string };
+
+          console.log('[Agent SFX] Generating sound effect:', description);
+
+          // Try Pixabay first (free)
+          const pixabayKey = await loadAPIKey('pixabay');
+          const elevenlabsKey = await loadAPIKey('elevenlabs');
+
+          let sfxGenerated = false;
+
+          if (pixabayKey && !sfxGenerated) {
+            try {
+              console.log('[Pixabay] Searching for sound effect');
+              const { blob, metadata } = await getPixabaySoundEffect(description, pixabayKey);
+
+              const filename = `pixabay-sfx-${metadata.id}.mp3`;
+              const audioFile = new File([blob], filename, { type: 'audio/mpeg' });
+              const asset = await saveAsset(audioFile);
+              const blobUrl = URL.createObjectURL(audioFile);
+
+              generatedAudio = { asset, blobUrl };
+              assets = [...assets, asset];
+
+              updatedSpec = addAudioToSpec(updatedSpec, asset, metadata.duration);
+
+              actionResults.push(`✓ Added sound effect: "${metadata.tags}" (${metadata.duration}s)`);
+              sfxGenerated = true;
+            } catch (error) {
+              console.log('[Pixabay] Failed, trying ElevenLabs:', error);
+            }
+          }
+
+          // Fallback to ElevenLabs
+          if (elevenlabsKey && !sfxGenerated) {
+            try {
+              console.log('[ElevenLabs] Generating sound effect');
+              const sfxDuration = 3.0;
+              const audioBlob = await generateSoundEffect(description, elevenlabsKey, {
+                durationSeconds: sfxDuration,
+                promptInfluence: 0.3,
+              });
+              const filename = `sound-effect-${Date.now()}.mp3`;
+              const audioFile = new File([audioBlob], filename, { type: 'audio/mpeg' });
+              const asset = await saveAsset(audioFile);
+              const blobUrl = URL.createObjectURL(audioFile);
+
+              generatedAudio = { asset, blobUrl };
+              assets = [...assets, asset];
+
+              updatedSpec = addAudioToSpec(updatedSpec, asset, sfxDuration);
+
+              actionResults.push(`✓ Generated sound effect (${sfxDuration}s)`);
+              sfxGenerated = true;
+            } catch (error) {
+              console.error('[ElevenLabs] Sound effect generation failed:', error);
+            }
+          }
+
+          if (!sfxGenerated) {
+            actionResults.push('⚠️ Sound effect generation failed. Please configure Pixabay or ElevenLabs API key.');
+          }
+
+          break;
+        }
 
         default:
           console.warn('[Agent Chat] Unknown action type:', action.type);
