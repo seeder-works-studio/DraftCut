@@ -1203,7 +1203,7 @@ export async function chatWithAgentRouter(
           break;
         }
 
-        case 'generate_voice': {
+        case 'generate_voice_narration': {
           const { text, voice } = action.params as { text: string; voice?: string };
 
           console.log('[Agent Voice] Generating narration:', text);
