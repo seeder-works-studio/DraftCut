@@ -31,9 +31,14 @@ export function useAssetLoader() {
       });
     }
 
-    // Cleanup on unmount
+    // Note: Don't revoke blob URLs when assets change - they might still be in use
+    // Cleanup only happens when component unmounts (empty dependency array below)
+  }, [spec?.assets, assetBlobUrls, setAssetBlobUrl]);
+
+  // Cleanup ONLY on component unmount
+  useEffect(() => {
     return () => {
       revokeAllBlobUrls();
     };
-  }, [spec?.assets]);
+  }, [revokeAllBlobUrls]);
 }
