@@ -524,6 +524,7 @@ export async function chatEditSpecWithAudio(
         // Update brand kit with logo and colors
         updatedSpec = {
           ...updatedSpec,
+          assets: [...updatedSpec.assets, asset], // Add logo to spec.assets
           brandKit: {
             ...updatedSpec.brandKit,
             logoAssetId: asset.id,
