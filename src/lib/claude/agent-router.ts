@@ -239,18 +239,26 @@ User: "make intro longer"
 
 Be smart, be helpful, and always prefer clarity over guessing.`;
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 /**
  * Analyze user's request and create an execution plan
+ * @param messages - Recent conversation messages (last 5 for context)
  */
 export async function analyzeRequest(
-  userMessage: string,
+  messages: ChatMessage[],
   apiKey: string,
   model: string = 'gpt-4-turbo-preview',
   baseURL?: string,
   provider?: string
 ): Promise<AgentPlan> {
-  console.log('[Agent Router] Analyzing request:', userMessage);
+  const lastUserMessage = messages[messages.length - 1]?.content || '';
+  console.log('[Agent Router] Analyzing request:', lastUserMessage);
   console.log('[Agent Router] Provider:', provider, 'Model:', model);
+  console.log('[Agent Router] Context messages:', messages.length);
 
   const actions: AgentAction[] = [];
   let needsClarification = false;
@@ -279,12 +287,10 @@ export async function analyzeRequest(
       max_tokens: 2000,
       system: SYSTEM_PROMPT,
       tools: anthropicTools,
-      messages: [
-        {
-          role: 'user',
-          content: userMessage,
-        },
-      ],
+      messages: messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
     });
 
     console.log('[Agent Router] Anthropic Response:', JSON.stringify(response, null, 2));
@@ -324,10 +330,10 @@ export async function analyzeRequest(
           role: 'system',
           content: SYSTEM_PROMPT,
         },
-        {
-          role: 'user',
-          content: userMessage,
-        },
+        ...messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
       ],
       tools: AVAILABLE_TOOLS,
       tool_choice: 'auto',

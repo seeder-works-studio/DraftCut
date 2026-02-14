@@ -963,9 +963,15 @@ export async function chatWithAgentRouter(
     baseURL = 'https://api.openai.com/v1';
   }
 
+  // Get last 5 messages for context (convert from chat store format)
+  const contextMessages = messages.slice(-5).map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+  }));
+
   // Use the agent router to analyze the request
   const plan = await analyzeRequest(
-    lastUserMessage,
+    contextMessages,
     aiConfig.apiKey,
     aiConfig.model,
     baseURL,
