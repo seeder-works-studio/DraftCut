@@ -90,7 +90,16 @@ export const IntroTitleCard: React.FC<IntroTitleCardProps> = ({
           }}
         >
           <Img
-            src={assetBlobUrls[logoAssetId] || logoAssetId}
+            src={(() => {
+              const logoSrc = assetBlobUrls[logoAssetId] || logoAssetId;
+              console.log('[IntroTitleCard] Rendering logo:', {
+                logoAssetId,
+                logoSrc,
+                hasBlobUrl: !!assetBlobUrls[logoAssetId],
+                allBlobUrls: Object.keys(assetBlobUrls),
+              });
+              return logoSrc;
+            })()}
             style={{
               width: 160,
               height: 160,

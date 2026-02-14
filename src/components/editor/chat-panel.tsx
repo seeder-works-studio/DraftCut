@@ -140,13 +140,24 @@ export function ChatPanel() {
       // If audio was generated, add it to project assets AND spec
       if (result.generatedAudio) {
         const { asset, blobUrl } = result.generatedAudio;
+        console.log('[ChatPanel] Registering asset:', {
+          assetId: asset.id,
+          filename: asset.filename,
+          blobUrl: blobUrl,
+          type: asset.type,
+        });
+
         addAsset(asset);
         setAssetBlobUrl(asset.id, blobUrl);
+
+        console.log('[ChatPanel] Blob URL registered for asset:', asset.id);
+
         toast.success(`Generated audio: ${asset.filename}`);
 
         // Add asset to spec.assets if spec was updated
         if (result.spec && !result.spec.assets.find(a => a.id === asset.id)) {
           result.spec.assets.push(asset);
+          console.log('[ChatPanel] Added asset to spec.assets');
         }
       }
 

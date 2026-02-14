@@ -518,6 +518,13 @@ export async function chatEditSpecWithAudio(
         const asset = await saveAsset(logoFile);
         const blobUrl = URL.createObjectURL(logoFile);
 
+        console.log('[Logo] Asset created:', {
+          assetId: asset.id,
+          filename: asset.filename,
+          blobUrl: blobUrl,
+          fileSize: logoFile.size,
+        });
+
         generatedAudio = { asset, blobUrl }; // Reuse generatedAudio to pass logo back
         assets = [...assets, asset];
 
@@ -536,6 +543,12 @@ export async function chatEditSpecWithAudio(
             modified: new Date().toISOString(),
           },
         };
+
+        console.log('[Logo] Updated spec with logo:', {
+          logoAssetId: updatedSpec.brandKit?.logoAssetId,
+          assetsCount: updatedSpec.assets.length,
+          brandColors: [brandColors?.[0], brandColors?.[1]],
+        });
 
         const hostname = new URL(url).hostname;
         const successMsg = brandName
