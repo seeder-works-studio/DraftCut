@@ -139,10 +139,7 @@ export const TimelineComposition: React.FC<TimelineCompositionProps> = ({
 
         return (
           <Sequence key={clip.id} from={startFrame} durationInFrames={durationInFrames}>
-            <Audio
-              src={blobUrl}
-              startFrom={Math.round((clip.trimStart || 0) * canvas.fps)}
-            />
+            <Audio src={blobUrl} />
           </Sequence>
         );
       })}

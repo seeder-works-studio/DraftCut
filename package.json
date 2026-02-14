@@ -12,6 +12,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@diffusionstudio/core": "^4.0.3",
+    "@remotion/media": "^4.0.422",
     "@remotion/player": "^4.0.422",
     "@remotion/web-renderer": "^4.0.422",
     "@remotion/webcodecs": "^4.0.422",
