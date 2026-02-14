@@ -168,4 +168,51 @@ export function validateProjectSpec(data: unknown): ProjectSpec {
   }
 }
 
+/**
+ * Strict validation that throws errors for invalid asset references
+ * Used before applying AI-generated spec updates
+ */
+export function validateAssetReferences(
+  spec: ProjectSpec,
+  availableAssets: { id: string }[]
+): { valid: true } | { valid: false; errors: string[] } {
+  const assetIds = new Set(availableAssets.map((a) => a.id));
+  const errors: string[] = [];
+
+  // Check brand kit logo reference
+  if (spec.brandKit?.logoAssetId && !assetIds.has(spec.brandKit.logoAssetId)) {
+    errors.push(
+      `Brand kit references non-existent logo asset: ${spec.brandKit.logoAssetId}`
+    );
+  }
+
+  // Check all clip asset references
+  for (const track of spec.composition.tracks) {
+    for (const clip of track.clips) {
+      // Check direct assetId
+      if (clip.assetId && !assetIds.has(clip.assetId)) {
+        errors.push(
+          `Clip "${clip.id}" (${clip.type}) references non-existent asset: ${clip.assetId}`
+        );
+      }
+
+      // Check skillProps for assetId references
+      if (clip.skillProps && typeof clip.skillProps === 'object') {
+        const props = clip.skillProps as Record<string, unknown>;
+        if (props.assetId && typeof props.assetId === 'string' && !assetIds.has(props.assetId)) {
+          errors.push(
+            `Skill clip "${clip.id}" (${clip.skillType}) references non-existent asset: ${props.assetId}`
+          );
+        }
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return { valid: true };
+}
+
 export { ProjectSpecSchema, ClipSchema, TrackSchema, AssetSchema, BrandKitSchema };

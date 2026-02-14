@@ -49,6 +49,7 @@ export async function chatEditSpecWithAudio(
   const isMusicRequest = isMusicGenerationRequest(lastUserMessage);
 
   let generatedAudio: ChatWithAudioResult['generatedAudio'];
+  let updatedSpec = currentSpec; // Will be updated if audio is added
 
   // Generate audio if requested (voice or sound effects)
   if (isVoiceRequest || isSoundRequest) {
@@ -86,15 +87,24 @@ export async function chatEditSpecWithAudio(
           generatedAudio = { asset, blobUrl };
           assets = [...assets, asset];
 
+          // Estimate duration based on text length (rough: ~150 words/min = ~2.5 words/sec)
+          const wordCount = textToNarrate.split(/\s+/).length;
+          const estimatedDuration = Math.max(wordCount / 2.5, 2); // At least 2 seconds
+
+          // Automatically add voice narration to spec
+          updatedSpec = addAudioToSpec(updatedSpec, asset, estimatedDuration);
+
           messages = [
             ...messages,
             {
               id: `system-${Date.now()}`,
               role: 'assistant',
-              content: `Voice narration generated and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
+              content: `✓ Added voice narration to timeline: "${textToNarrate.substring(0, 50)}..." (~${Math.round(estimatedDuration)}s)`,
               timestamp: Date.now(),
             },
           ];
+
+          console.log('[ElevenLabs] Voice narration generated and added to timeline');
         } catch (error) {
           console.error('[ElevenLabs] Voice generation failed:', error);
         }
@@ -122,25 +132,29 @@ export async function chatEditSpecWithAudio(
           generatedAudio = { asset, blobUrl };
           assets = [...assets, asset];
 
+          // Automatically add sound effect to spec
+          updatedSpec = addAudioToSpec(updatedSpec, asset, metadata.duration);
+
           messages = [
             ...messages,
             {
               id: `system-${Date.now()}`,
               role: 'assistant',
-              content: `Sound effect found on Pixabay and saved as asset "${asset.id}" (${metadata.tags}, ${metadata.duration}s). You can now reference this audio in the video spec.`,
+              content: `✓ Added sound effect to timeline: "${metadata.tags}" (${metadata.duration}s)`,
               timestamp: Date.now(),
             },
           ];
 
-          console.log('[Pixabay] Sound effect retrieved successfully');
+          console.log('[Pixabay] Sound effect retrieved and added to timeline');
         } catch (pixabayError) {
           console.log('[Pixabay] Failed, trying ElevenLabs fallback');
 
           // Fallback to ElevenLabs
           if (elevenlabsKey) {
             try {
+              const sfxDuration = 3.0;
               const audioBlob = await generateSoundEffect(soundDescription, elevenlabsKey, {
-                durationSeconds: 3.0,
+                durationSeconds: sfxDuration,
                 promptInfluence: 0.3,
               });
               const filename = `sound-effect-${Date.now()}.mp3`;
@@ -152,17 +166,20 @@ export async function chatEditSpecWithAudio(
               generatedAudio = { asset, blobUrl };
               assets = [...assets, asset];
 
+              // Automatically add sound effect to spec
+              updatedSpec = addAudioToSpec(updatedSpec, asset, sfxDuration);
+
               messages = [
                 ...messages,
                 {
                   id: `system-${Date.now()}`,
                   role: 'assistant',
-                  content: `Sound effect generated with ElevenLabs and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
+                  content: `✓ Added sound effect to timeline: "${soundDescription.substring(0, 50)}" (${sfxDuration}s, via ElevenLabs)`,
                   timestamp: Date.now(),
                 },
               ];
 
-              console.log('[ElevenLabs] Sound effect generated successfully');
+              console.log('[ElevenLabs] Sound effect generated and added to timeline');
             } catch (error) {
               console.error('[ElevenLabs] Sound effect generation failed:', error);
             }
@@ -172,8 +189,9 @@ export async function chatEditSpecWithAudio(
         // No Pixabay key, use ElevenLabs directly
         try {
           console.log('[ElevenLabs] Generating sound effect (no Pixabay key)');
+          const sfxDuration = 3.0;
           const audioBlob = await generateSoundEffect(soundDescription, elevenlabsKey, {
-            durationSeconds: 3.0,
+            durationSeconds: sfxDuration,
             promptInfluence: 0.3,
           });
           const filename = `sound-effect-${Date.now()}.mp3`;
@@ -185,12 +203,15 @@ export async function chatEditSpecWithAudio(
           generatedAudio = { asset, blobUrl };
           assets = [...assets, asset];
 
+          // Automatically add sound effect to spec
+          updatedSpec = addAudioToSpec(updatedSpec, asset, sfxDuration);
+
           messages = [
             ...messages,
             {
               id: `system-${Date.now()}`,
               role: 'assistant',
-              content: `Sound effect generated and saved as asset "${asset.id}". You can now reference this audio in the video spec.`,
+              content: `✓ Added sound effect to timeline: "${soundDescription.substring(0, 50)}" (${sfxDuration}s)`,
               timestamp: Date.now(),
             },
           ];
@@ -239,17 +260,20 @@ export async function chatEditSpecWithAudio(
         generatedAudio = { asset, blobUrl };
         assets = [...assets, asset];
 
+        // Automatically add audio to spec
+        updatedSpec = addAudioToSpec(updatedSpec, asset, metadata.duration);
+
         messages = [
           ...messages,
           {
             id: `system-${Date.now()}`,
             role: 'assistant',
-            content: `Music found on Jamendo: "${metadata.name}" by ${metadata.artist_name} (${metadata.duration}s) - saved as asset "${asset.id}". You can now add this music to an audio track in the video spec.`,
+            content: `✓ Added music to timeline: "${metadata.name}" by ${metadata.artist_name} (${metadata.duration}s)`,
             timestamp: Date.now(),
           },
         ];
 
-        console.log('✅ [Jamendo] Music retrieved successfully');
+        console.log('✅ [Jamendo] Music retrieved and added to timeline');
         console.groupEnd(); // End music generation group
       } catch (jamendoError) {
         console.error('❌ [Jamendo] Failed:', jamendoError);
@@ -261,18 +285,21 @@ export async function chatEditSpecWithAudio(
             let audioBlob: Blob;
             let filename: string;
             let provider: string;
+            let musicDuration: number;
 
             if (beatovenKey) {
               console.log('[Beatoven] Generating music');
               audioBlob = await generateMusicBeatoven(musicDescription, beatovenKey);
               filename = `music-beatoven-${Date.now()}.mp3`;
               provider = 'Beatoven';
+              musicDuration = duration || currentSpec.canvas.duration; // Use video duration as fallback
             } else if (replicateKey) {
               console.log('[Replicate] Generating music');
               const genDuration = duration || 20;
               audioBlob = await generateMusic(musicDescription, genDuration, replicateKey);
               filename = `music-replicate-${Date.now()}.wav`;
               provider = 'Replicate';
+              musicDuration = genDuration;
             } else {
               throw new Error('No generative music API key available');
             }
@@ -285,17 +312,20 @@ export async function chatEditSpecWithAudio(
             generatedAudio = { asset, blobUrl };
             assets = [...assets, asset];
 
+            // Automatically add audio to spec
+            currentSpec = addAudioToSpec(currentSpec, asset, musicDuration);
+
             messages = [
               ...messages,
               {
                 id: `system-${Date.now()}`,
                 role: 'assistant',
-                content: `Music generated with ${provider} and saved as asset "${asset.id}". You can now add this music to an audio track in the video spec.`,
+                content: `✓ Added ${provider} music to timeline (${musicDuration}s)`,
                 timestamp: Date.now(),
               },
             ];
 
-            console.log(`✅ [${provider}] Music generated successfully`);
+            console.log(`✅ [${provider}] Music generated and added to timeline`);
             console.groupEnd(); // End music generation group
           } catch (error) {
             console.error('❌ [Music] All providers failed:', error);
@@ -315,23 +345,26 @@ export async function chatEditSpecWithAudio(
         }
       }
     } else if (beatovenKey || replicateKey) {
-      // No Pixabay key, use generative AI directly
+      // No Jamendo key, use generative AI directly
       try {
         let audioBlob: Blob;
         let filename: string;
         let provider: string;
+        let musicDuration: number;
 
         if (beatovenKey) {
-          console.log('[Beatoven] Generating music (no Pixabay key)');
+          console.log('[Beatoven] Generating music (no Jamendo key)');
           audioBlob = await generateMusicBeatoven(musicDescription, beatovenKey);
           filename = `music-beatoven-${Date.now()}.mp3`;
           provider = 'Beatoven';
+          musicDuration = duration || currentSpec.canvas.duration;
         } else if (replicateKey) {
-          console.log('[Replicate] Generating music (no Pixabay key)');
+          console.log('[Replicate] Generating music (no Jamendo key)');
           const genDuration = duration || 20;
           audioBlob = await generateMusic(musicDescription, genDuration, replicateKey);
           filename = `music-replicate-${Date.now()}.wav`;
           provider = 'Replicate';
+          musicDuration = genDuration;
         } else {
           throw new Error('No music API key available');
         }
@@ -344,17 +377,20 @@ export async function chatEditSpecWithAudio(
         generatedAudio = { asset, blobUrl };
         assets = [...assets, asset];
 
+        // Automatically add audio to spec
+        currentSpec = addAudioToSpec(currentSpec, asset, musicDuration);
+
         messages = [
           ...messages,
           {
             id: `system-${Date.now()}`,
             role: 'assistant',
-            content: `Music generated with ${provider} and saved as asset "${asset.id}". You can now add this music to an audio track in the video spec.`,
+            content: `✓ Added ${provider} music to timeline (${musicDuration}s)`,
             timestamp: Date.now(),
           },
         ];
 
-        console.log(`[${provider}] Music generated successfully`);
+        console.log(`[${provider}] Music generated and added to timeline`);
       } catch (error) {
         console.error('[Music] Generation failed:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -384,8 +420,8 @@ export async function chatEditSpecWithAudio(
     }
   }
 
-  // Call normal chat with potentially updated assets and messages
-  const result = await chatEditSpec(messages, currentSpec, assets, config);
+  // Call normal chat with potentially updated assets and spec
+  const result = await chatEditSpec(messages, updatedSpec, assets, config);
 
   return {
     ...result,
@@ -489,4 +525,46 @@ export function extractMusicDescription(message: string): string {
   }
 
   return description;
+}
+
+/**
+ * Automatically add audio asset to the project spec
+ */
+function addAudioToSpec(spec: ProjectSpec, asset: Asset, audioDuration: number): ProjectSpec {
+  // Find or create audio track
+  let audioTrack = spec.composition.tracks.find((t) => t.type === 'audio');
+
+  if (!audioTrack) {
+    // Create new audio track
+    audioTrack = {
+      id: 'audio-track-1',
+      type: 'audio',
+      clips: [],
+    };
+    spec.composition.tracks.push(audioTrack);
+    console.log('[Audio] Created new audio track');
+  }
+
+  // Add audio clip to the track
+  const audioClip = {
+    id: `audio-clip-${Date.now()}`,
+    type: 'audio' as const,
+    assetId: asset.id,
+    startTime: 0, // Start from beginning
+    duration: Math.min(audioDuration, spec.canvas.duration), // Don't exceed video duration
+  };
+
+  audioTrack.clips.push(audioClip);
+  console.log('[Audio] Added audio clip to track:', audioClip);
+
+  // Update assets array if not already present
+  if (!spec.assets.find((a) => a.id === asset.id)) {
+    spec.assets.push(asset);
+    console.log('[Audio] Added asset to spec.assets');
+  }
+
+  // Update modified timestamp
+  spec.metadata.modified = new Date().toISOString();
+
+  return spec;
 }

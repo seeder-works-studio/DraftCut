@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { validateProjectSpec } from '@/lib/spec/validator';
+import { validateProjectSpec, validateAssetReferences } from '@/lib/spec/validator';
 import { buildSystemPrompt } from './prompt';
 import type { Asset, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
@@ -77,7 +77,7 @@ function convertMessages(
   }));
 }
 
-function parseResponse(text: string): ChatResult {
+function parseResponse(text: string, availableAssets: Asset[]): ChatResult {
   const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
 
   if (!jsonMatch) {
@@ -105,16 +105,31 @@ function parseResponse(text: string): ChatResult {
     }
 
     const spec = validateProjectSpec(parsed);
+
+    // Validate asset references against available assets
+    const validation = validateAssetReferences(spec, availableAssets);
+    if (!validation.valid) {
+      const errorList = validation.errors.map((e) => `• ${e}`).join('\n');
+      return {
+        displayText:
+          displayText ||
+          text.trim() +
+            `\n\n⚠️ **Asset Reference Errors:**\n${errorList}\n\nPlease ensure all referenced assets exist.`,
+        spec: null,
+      };
+    }
+
     return {
       displayText: displayText || 'Updated the video spec.',
       spec,
     };
-  } catch {
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     return {
       displayText:
         displayText ||
         text.trim() +
-          '\n\n(Note: I tried to update the spec but the JSON was invalid. Please try again.)',
+          `\n\n(Note: I tried to update the spec but validation failed: ${errorMsg}. Please try again.)`,
       spec: null,
     };
   }
@@ -184,5 +199,5 @@ export async function chatEditSpec(
     responseText = data.choices[0].message.content;
   }
 
-  return parseResponse(responseText);
+  return parseResponse(responseText, assets);
 }
