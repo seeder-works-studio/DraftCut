@@ -28,6 +28,10 @@ import {
   isMediaRecorderSupported,
   exportWithMediaRecorder,
 } from '@/lib/export/mediarecorder-exporter';
+import {
+  isWebRendererSupported,
+  exportWithWebRenderer,
+} from '@/lib/export/webrenderer-exporter';
 import { loadAsset } from '@/lib/storage/assets';
 
 interface ExportDialogProps {
@@ -35,16 +39,17 @@ interface ExportDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ExportMethod = 'webm' | 'diffusion' | 'json';
+type ExportMethod = 'webrenderer' | 'webm' | 'diffusion' | 'json';
 type ExportQuality = 'low' | 'medium' | 'high' | 'ultra';
 type ExportResolution = '0.5' | '1' | '1.5' | '2';
 
 export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [exportMethod, setExportMethod] = useState<ExportMethod>('webm');
+  const [exportMethod, setExportMethod] = useState<ExportMethod>('webrenderer');
   const [quality, setQuality] = useState<ExportQuality>('high');
   const [resolution, setResolution] = useState<ExportResolution>('1');
+  const [webRendererSupported, setWebRendererSupported] = useState(false);
   const [diffusionSupported, setDiffusionSupported] = useState(false);
   const [mediaRecorderSupported, setMediaRecorderSupported] = useState(false);
 
@@ -53,15 +58,18 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
 
   useEffect(() => {
     // Check support on mount
+    const webRenderer = isWebRendererSupported();
     const diffusion = isDiffusionStudiosSupported();
     const mediaRecorder = isMediaRecorderSupported();
 
+    setWebRendererSupported(webRenderer);
     setDiffusionSupported(diffusion);
     setMediaRecorderSupported(mediaRecorder);
 
-    // Default to WebM (most reliable) instead of Diffusion Studios (experimental)
-    // Diffusion Studios has LAB color compatibility issues
-    if (mediaRecorder) {
+    // Priority: WebRenderer (best) > WebM (fallback) > Diffusion (experimental) > JSON
+    if (webRenderer) {
+      setExportMethod('webrenderer');
+    } else if (mediaRecorder) {
       setExportMethod('webm');
     } else if (diffusion) {
       setExportMethod('diffusion');
@@ -125,7 +133,30 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       try {
       console.log('Export method selected:', exportMethod);
 
-      if (exportMethod === 'webm' && mediaRecorderSupported) {
+      if (exportMethod === 'webrenderer' && webRendererSupported) {
+        // Export with Remotion Web Renderer (best quality, proper rendering)
+        console.log('Starting export with Remotion Web Renderer');
+        toast.info('Starting video export with Remotion Web Renderer...');
+
+        const videoBlob = await exportWithWebRenderer(
+          { spec, assetBlobUrls: loadedBlobUrls },
+          {
+            quality: quality as 'low' | 'medium' | 'high',
+            onProgress: (p) => setProgress(p * 100),
+          }
+        );
+
+        // Download the video
+        const url = URL.createObjectURL(videoBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `draftcut-video-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        toast.success('Video exported successfully!');
+        onOpenChange(false);
+      } else if (exportMethod === 'webm' && mediaRecorderSupported) {
         // Export with MediaRecorder (WebM, browser-based)
         console.log('Starting WebM export with MediaRecorder API');
         toast.info('Starting WebM export (YouTube-compatible)...');
@@ -248,12 +279,16 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="webrenderer" disabled={!webRendererSupported}>
+                  Remotion Web Renderer (Best Quality) {webRendererSupported && '✓ Recommended'}
+                  {!webRendererSupported && ' - WebCodecs not supported'}
+                </SelectItem>
                 <SelectItem value="webm" disabled={!mediaRecorderSupported}>
-                  WebM Video (YouTube-Compatible) {mediaRecorderSupported && '✓ Recommended'}
+                  WebM Video (YouTube-Compatible) {!webRendererSupported && mediaRecorderSupported && '✓ Recommended'}
                   {!mediaRecorderSupported && ' - Not Available'}
                 </SelectItem>
                 <SelectItem value="diffusion" disabled={!diffusionSupported}>
-                  MP4 Video (Diffusion Studios - Premium)
+                  MP4 Video (Diffusion Studios - Experimental)
                   {!diffusionSupported && ' - Not Available'}
                 </SelectItem>
                 <SelectItem value="json">
@@ -263,6 +298,22 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
             </Select>
 
             {/* Support Status */}
+            {exportMethod === 'webrenderer' && (
+              <div className="text-xs space-y-1">
+                {webRendererSupported ? (
+                  <div className="text-green-600 dark:text-green-400 space-y-1">
+                    <p>✓ Remotion Web Renderer available</p>
+                    <p className="text-muted-foreground">
+                      Uses proper Remotion rendering with WebCodecs. Skills render perfectly without frame-by-frame hacks.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-amber-600 dark:text-amber-400">
+                    ⚠️ Your browser doesn't support WebCodecs API (required for Remotion Web Renderer)
+                  </p>
+                )}
+              </div>
+            )}
             {exportMethod === 'webm' && (
               <div className="text-xs space-y-1">
                 {mediaRecorderSupported ? (
@@ -389,6 +440,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
               onClick={exportMethod === 'json' ? handleExportJSON : handleExportVideo}
               disabled={
                 isExporting ||
+                (exportMethod === 'webrenderer' && !webRendererSupported) ||
                 (exportMethod === 'webm' && !mediaRecorderSupported) ||
                 (exportMethod === 'diffusion' && !diffusionSupported)
               }
@@ -397,6 +449,8 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
                 ? 'Exporting...'
                 : exportMethod === 'json'
                 ? 'Export JSON'
+                : exportMethod === 'webrenderer'
+                ? 'Export Video'
                 : exportMethod === 'webm'
                 ? 'Export WebM'
                 : 'Export MP4'}

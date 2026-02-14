@@ -13,6 +13,8 @@
     "@anthropic-ai/sdk": "^0.74.0",
     "@diffusionstudio/core": "^4.0.3",
     "@remotion/player": "^4.0.421",
+    "@remotion/web-renderer": "^4.0.422",
+    "@remotion/webcodecs": "^4.0.422",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
