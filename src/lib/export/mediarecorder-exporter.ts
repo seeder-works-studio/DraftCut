@@ -151,12 +151,10 @@ function findLabColors(obj: any, path: string = 'root'): string[] {
  * Sanitize all colors in the spec to hex format
  */
 function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
-  console.log('[MediaRecorder] Sanitizing spec colors...');
-
   // Check for LAB colors before sanitization
   const labColorsBefore = findLabColors(spec);
   if (labColorsBefore.length > 0) {
-    console.warn('[MediaRecorder] Found LAB colors BEFORE sanitization:', labColorsBefore);
+    console.warn('[MediaRecorder] Found LAB colors, sanitizing:', labColorsBefore);
   }
 
   // Deep clone and sanitize recursively
@@ -165,11 +163,8 @@ function sanitizeSpecColors(spec: ProjectSpec): ProjectSpec {
   // Verify no LAB colors remain after sanitization
   const labColorsAfter = findLabColors(sanitized);
   if (labColorsAfter.length > 0) {
-    console.error('[MediaRecorder] ❌ LAB colors still present AFTER sanitization:', labColorsAfter);
-    console.error('[MediaRecorder] Sanitized spec:', JSON.stringify(sanitized, null, 2));
+    console.error('[MediaRecorder] LAB colors still present after sanitization:', labColorsAfter);
     throw new Error(`LAB colors found in spec after sanitization: ${labColorsAfter.join(', ')}`);
-  } else {
-    console.log('[MediaRecorder] ✓ Color sanitization complete - no LAB colors found');
   }
 
   return sanitized;
@@ -195,13 +190,9 @@ export async function exportWithMediaRecorder(
   context: ExportContext,
   options: MediaRecorderExportOptions = {}
 ): Promise<Blob> {
-  console.log('[MediaRecorder] Starting export...');
-
   // Sanitize all colors to hex format before export
   const spec = sanitizeSpecColors(context.spec);
   const { assetBlobUrls } = context;
-
-  console.log('[MediaRecorder] Spec sanitized, creating canvas...');
 
   const {
     quality = 'high',
@@ -217,8 +208,6 @@ export async function exportWithMediaRecorder(
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('Failed to get canvas context');
 
-  console.log('[MediaRecorder] Canvas created, setting up video stream...');
-
   // Set up video stream
   const stream = canvas.captureStream(spec.canvas.fps);
 
@@ -227,8 +216,6 @@ export async function exportWithMediaRecorder(
   if (audioTrack) {
     stream.addTrack(audioTrack);
   }
-
-  console.log('[MediaRecorder] Video stream ready, starting MediaRecorder...');
 
   // Set up MediaRecorder
   const mimeType = getSupportedMimeType();
@@ -251,13 +238,8 @@ export async function exportWithMediaRecorder(
   // Calculate total frames
   const totalFrames = Math.ceil(spec.canvas.duration * spec.canvas.fps);
 
-  console.log('[MediaRecorder] Preloading media elements...');
-
   // Pre-load all video and image elements
   const mediaElements = await preloadMediaElements(spec, assetBlobUrls);
-
-  console.log('[MediaRecorder] Media elements loaded, starting frame rendering...');
-  console.log('[MediaRecorder] Total frames to render:', totalFrames);
 
   // Render each frame
   for (let frame = 0; frame < totalFrames; frame++) {
@@ -579,8 +561,6 @@ async function renderSkillClip(
 ): Promise<void> {
   if (!clip.skillType || !clip.skillProps) return;
 
-  console.log(`[MediaRecorder] Rendering skill clip: ${clip.skillType}`);
-
   const skillDef = SKILL_REGISTRY[clip.skillType];
   if (!skillDef) return;
 
@@ -618,8 +598,6 @@ async function renderRemotionSkillToCanvas(
 
   const skillDef = SKILL_REGISTRY[clip.skillType];
   if (!skillDef) return;
-
-  console.log(`[MediaRecorder] Creating isolated iframe for ${clip.skillType}...`);
 
   // Create isolated iframe to completely block CSS inheritance
   const iframe = document.createElement('iframe');
@@ -715,8 +693,6 @@ async function renderRemotionSkillToCanvas(
 
     let capturedCanvas;
     try {
-      console.log(`[MediaRecorder] Attempting html2canvas capture for ${clip.skillType}...`);
-
       capturedCanvas = await html2canvas(container, {
         width: spec.canvas.width,
         height: spec.canvas.height,
@@ -728,25 +704,20 @@ async function renderRemotionSkillToCanvas(
         ignoreElements: (element) => {
           // Skip elements that might have problematic styles
           const computedStyle = iframeWindow.getComputedStyle(element);
-          // Check if any color property has LAB format
           const props = ['color', 'backgroundColor', 'borderColor'];
           for (const prop of props) {
             const value = computedStyle.getPropertyValue(prop);
             if (value && (value.includes('lab(') || value.includes('oklch('))) {
-              console.warn(`[MediaRecorder] Skipping element with LAB color:`, prop, value);
               return true;
             }
           }
           return false;
         },
       });
-
-      console.log(`[MediaRecorder] html2canvas capture successful`);
     } catch (err) {
-      console.error(`[MediaRecorder] html2canvas failed for ${clip.skillType}:`, err);
+      console.error(`[MediaRecorder] Skill render failed for ${clip.skillType}, using placeholder:`, err);
 
       // FALLBACK: Draw a placeholder instead of crashing
-      console.warn(`[MediaRecorder] Using placeholder for ${clip.skillType}`);
       const fallbackCanvas = document.createElement('canvas');
       fallbackCanvas.width = spec.canvas.width;
       fallbackCanvas.height = spec.canvas.height;
