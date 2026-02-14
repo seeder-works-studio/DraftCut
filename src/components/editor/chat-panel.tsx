@@ -134,12 +134,17 @@ export function ChatPanel() {
 
       const result = await chatEditSpecWithAudio(apiMessages, spec, assets, aiConfig);
 
-      // If audio was generated, add it to project assets
+      // If audio was generated, add it to project assets AND spec
       if (result.generatedAudio) {
         const { asset, blobUrl } = result.generatedAudio;
         addAsset(asset);
         setAssetBlobUrl(asset.id, blobUrl);
         toast.success(`Generated audio: ${asset.filename}`);
+
+        // Add asset to spec.assets if spec was updated
+        if (result.spec && !result.spec.assets.find(a => a.id === asset.id)) {
+          result.spec.assets.push(asset);
+        }
       }
 
       const assistantMessage: ChatMessage = {

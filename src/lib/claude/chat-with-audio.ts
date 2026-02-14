@@ -557,11 +557,9 @@ function addAudioToSpec(spec: ProjectSpec, asset: Asset, audioDuration: number):
   audioTrack.clips.push(audioClip);
   console.log('[Audio] Added audio clip to track:', audioClip);
 
-  // Update assets array if not already present
-  if (!spec.assets.find((a) => a.id === asset.id)) {
-    spec.assets.push(asset);
-    console.log('[Audio] Added asset to spec.assets');
-  }
+  // Note: Asset is NOT added to spec.assets here
+  // It will be added by the chat panel after blob URL is registered
+  // This prevents race condition where preview tries to play asset before blob URL is ready
 
   // Update modified timestamp
   spec.metadata.modified = new Date().toISOString();
