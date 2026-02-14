@@ -3,7 +3,7 @@
  * Uses Claude's tool use to understand intent and execute actions
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 export interface AgentAction {
   type: 'fetch_logo' | 'fetch_stock_images' | 'generate_music' | 'generate_voice' | 'generate_sfx' | 'update_spec' | 'ask_clarification';
@@ -17,123 +17,144 @@ export interface AgentPlan {
   clarificationQuestion?: string;
 }
 
-const AVAILABLE_TOOLS: Anthropic.Tool[] = [
+const AVAILABLE_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
-    name: 'fetch_brand_logo',
-    description: 'Fetch a brand logo and colors from a domain using Brandfetch. Use this when user mentions a brand/company and wants their logo.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        domain: {
-          type: 'string',
-          description: 'The domain to fetch from (e.g., "claude.ai", "google.com", "nba.com")',
+    type: 'function' as const,
+    function: {
+      name: 'fetch_brand_logo',
+      description: 'Fetch a brand logo and colors from a domain using Brandfetch. Use this when user mentions a brand/company and wants their logo.',
+      parameters: {
+        type: 'object',
+        properties: {
+          domain: {
+            type: 'string',
+            description: 'The domain to fetch from (e.g., "claude.ai", "google.com", "nba.com")',
+          },
+          brandName: {
+            type: 'string',
+            description: 'The brand name mentioned by user (e.g., "Claude", "Google", "NBA")',
+          },
         },
-        brandName: {
-          type: 'string',
-          description: 'The brand name mentioned by user (e.g., "Claude", "Google", "NBA")',
-        },
+        required: ['domain', 'brandName'],
       },
-      required: ['domain', 'brandName'],
     },
   },
   {
-    name: 'fetch_stock_images',
-    description: 'Fetch stock photos from Unsplash based on a search query. Use when user asks for images/photos of something.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        query: {
-          type: 'string',
-          description: 'Search query for stock images (e.g., "ocean sunset", "business meeting", "nature")',
+    type: 'function' as const,
+    function: {
+      name: 'fetch_stock_images',
+      description: 'Fetch stock photos from Unsplash based on a search query. Use when user asks for images/photos of something.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Search query for stock images (e.g., "ocean sunset", "business meeting", "nature")',
+          },
+          count: {
+            type: 'number',
+            description: 'Number of images to fetch (default: 5)',
+          },
         },
-        count: {
-          type: 'number',
-          description: 'Number of images to fetch (default: 5)',
-        },
+        required: ['query'],
       },
-      required: ['query'],
     },
   },
   {
-    name: 'generate_music',
-    description: 'Generate or find background music. Use when user asks for music, soundtrack, or background audio.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        description: {
-          type: 'string',
-          description: 'Description of the music style/mood (e.g., "upbeat electronic", "calm piano", "energetic rock")',
+    type: 'function' as const,
+    function: {
+      name: 'generate_music',
+      description: 'Generate or find background music. Use when user asks for music, soundtrack, or background audio.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Description of the music style/mood (e.g., "upbeat electronic", "calm piano", "energetic rock")',
+          },
+          duration: {
+            type: 'number',
+            description: 'Desired duration in seconds',
+          },
         },
-        duration: {
-          type: 'number',
-          description: 'Desired duration in seconds',
-        },
+        required: ['description'],
       },
-      required: ['description'],
     },
   },
   {
-    name: 'generate_voice_narration',
-    description: 'Generate AI voice narration. Use when user asks for voiceover, narration, or speech.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        text: {
-          type: 'string',
-          description: 'The text to speak',
+    type: 'function' as const,
+    function: {
+      name: 'generate_voice_narration',
+      description: 'Generate AI voice narration. Use when user asks for voiceover, narration, or speech.',
+      parameters: {
+        type: 'object',
+        properties: {
+          text: {
+            type: 'string',
+            description: 'The text to speak',
+          },
+          voice: {
+            type: 'string',
+            description: 'Voice style (e.g., "professional", "casual", "energetic")',
+          },
         },
-        voice: {
-          type: 'string',
-          description: 'Voice style (e.g., "professional", "casual", "energetic")',
-        },
+        required: ['text'],
       },
-      required: ['text'],
     },
   },
   {
-    name: 'generate_sound_effect',
-    description: 'Generate a sound effect. Use when user asks for SFX like whoosh, ding, explosion, etc.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        description: {
-          type: 'string',
-          description: 'Description of the sound effect (e.g., "whoosh", "ding", "explosion")',
+    type: 'function' as const,
+    function: {
+      name: 'generate_sound_effect',
+      description: 'Generate a sound effect. Use when user asks for SFX like whoosh, ding, explosion, etc.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Description of the sound effect (e.g., "whoosh", "ding", "explosion")',
+          },
         },
+        required: ['description'],
       },
-      required: ['description'],
     },
   },
   {
-    name: 'update_video_spec',
-    description: 'Update the video specification (timeline, clips, effects, etc). Use for any video editing requests.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        changes: {
-          type: 'string',
-          description: 'Description of what changes to make to the video',
+    type: 'function' as const,
+    function: {
+      name: 'update_video_spec',
+      description: 'Update the video specification (timeline, clips, effects, etc). Use for any video editing requests.',
+      parameters: {
+        type: 'object',
+        properties: {
+          changes: {
+            type: 'string',
+            description: 'Description of what changes to make to the video',
+          },
         },
+        required: ['changes'],
       },
-      required: ['changes'],
     },
   },
   {
-    name: 'ask_clarification',
-    description: 'Ask the user for clarification when the request is ambiguous or missing information.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        question: {
-          type: 'string',
-          description: 'The clarification question to ask',
+    type: 'function' as const,
+    function: {
+      name: 'ask_clarification',
+      description: 'Ask the user for clarification when the request is ambiguous or missing information.',
+      parameters: {
+        type: 'object',
+        properties: {
+          question: {
+            type: 'string',
+            description: 'The clarification question to ask',
+          },
+          reason: {
+            type: 'string',
+            description: 'Why clarification is needed',
+          },
         },
-        reason: {
-          type: 'string',
-          description: 'Why clarification is needed',
-        },
+        required: ['question', 'reason'],
       },
-      required: ['question', 'reason'],
     },
   },
 ];
@@ -196,23 +217,33 @@ Be smart, be helpful, and always prefer clarity over guessing.`;
 export async function analyzeRequest(
   userMessage: string,
   apiKey: string,
-  model: string = 'claude-sonnet-4-5-20250929'
+  model: string = 'gpt-4-turbo-preview',
+  baseURL?: string
 ): Promise<AgentPlan> {
-  const anthropic = new Anthropic({ apiKey });
+  // Use OpenAI SDK (works with OpenRouter, Cerebras, etc.)
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: baseURL || 'https://api.openai.com/v1',
+    dangerouslyAllowBrowser: true, // Safe because we're not shipping keys in code
+  });
 
   console.log('[Agent Router] Analyzing request:', userMessage);
 
-  const response = await anthropic.messages.create({
+  const response = await openai.chat.completions.create({
     model,
     max_tokens: 2000,
-    system: SYSTEM_PROMPT,
-    tools: AVAILABLE_TOOLS,
     messages: [
+      {
+        role: 'system',
+        content: SYSTEM_PROMPT,
+      },
       {
         role: 'user',
         content: userMessage,
       },
     ],
+    tools: AVAILABLE_TOOLS,
+    tool_choice: 'auto',
   });
 
   console.log('[Agent Router] Response:', JSON.stringify(response, null, 2));
@@ -221,21 +252,26 @@ export async function analyzeRequest(
   let needsClarification = false;
   let clarificationQuestion: string | undefined;
 
-  // Parse tool uses from response
-  for (const block of response.content) {
-    if (block.type === 'tool_use') {
+  // Parse tool calls from response
+  const toolCalls = response.choices[0]?.message?.tool_calls || [];
+
+  for (const toolCall of toolCalls) {
+    if (toolCall.type === 'function') {
+      const functionName = toolCall.function.name;
+      const functionArgs = JSON.parse(toolCall.function.arguments);
+
       const action: AgentAction = {
-        type: block.name as AgentAction['type'],
-        params: block.input as Record<string, unknown>,
-        reason: `AI decided to use ${block.name}`,
+        type: functionName as AgentAction['type'],
+        params: functionArgs as Record<string, unknown>,
+        reason: `AI decided to use ${functionName}`,
       };
 
       actions.push(action);
 
       // Check if it's asking for clarification
-      if (block.name === 'ask_clarification') {
+      if (functionName === 'ask_clarification') {
         needsClarification = true;
-        clarificationQuestion = (block.input as { question: string }).question;
+        clarificationQuestion = functionArgs.question as string;
       }
 
       console.log('[Agent Router] Action planned:', action);

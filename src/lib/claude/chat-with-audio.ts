@@ -948,8 +948,23 @@ export async function chatWithAgentRouter(
 
   console.log('[Agent Chat] Processing request:', lastUserMessage);
 
+  // Determine base URL based on provider
+  let baseURL: string | undefined;
+  if (aiConfig.provider === 'openrouter') {
+    baseURL = 'https://openrouter.ai/api/v1';
+  } else if (aiConfig.provider === 'cerebras') {
+    baseURL = 'https://api.cerebras.ai/v1';
+  } else if (aiConfig.provider === 'openai') {
+    baseURL = 'https://api.openai.com/v1';
+  }
+  // For Claude/Anthropic, we'll use OpenRouter as a proxy
+  else if (aiConfig.provider === 'claude') {
+    // We can't use Anthropic SDK in browser, so fallback to OpenAI format
+    baseURL = 'https://api.openai.com/v1';
+  }
+
   // Use the agent router to analyze the request
-  const plan = await analyzeRequest(lastUserMessage, aiConfig.apiKey, aiConfig.model);
+  const plan = await analyzeRequest(lastUserMessage, aiConfig.apiKey, aiConfig.model, baseURL);
 
   console.log('[Agent Chat] Execution plan:', plan);
 
