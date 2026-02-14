@@ -15,6 +15,7 @@ import { generateMusic } from '@/lib/ai/music';
 import { generateMusicBeatoven } from '@/lib/ai/beatoven';
 import { getPixabaySoundEffect } from '@/lib/ai/pixabay';
 import { getJamendoMusic } from '@/lib/ai/jamendo';
+import { processWebsiteUrl } from '@/lib/ai/website';
 import { saveAsset } from '@/lib/storage/assets';
 import type { Asset, ProjectSpec } from '@/lib/spec/types';
 import type { AIProviderConfig } from '@/components/home/ai-provider-selector';
@@ -43,13 +44,14 @@ export async function chatEditSpecWithAudio(
     .filter((m) => m.role === 'user')
     .pop()?.content || '';
 
-  // Check if user is requesting voice narration, sound effects, or music
+  // Check if user is requesting voice narration, sound effects, music, or logo fetch
   const isVoiceRequest = isVoiceNarrationRequest(lastUserMessage);
   const isSoundRequest = isSoundEffectRequest(lastUserMessage);
   const isMusicRequest = isMusicGenerationRequest(lastUserMessage);
+  const isLogoRequest = isLogoFetchRequest(lastUserMessage);
 
   let generatedAudio: ChatWithAudioResult['generatedAudio'];
-  let updatedSpec = currentSpec; // Will be updated if audio is added
+  let updatedSpec = currentSpec; // Will be updated if audio is added or logo is fetched
 
   // Generate audio if requested (voice or sound effects)
   if (isVoiceRequest || isSoundRequest) {
@@ -420,6 +422,77 @@ export async function chatEditSpecWithAudio(
     }
   }
 
+  // Fetch logo from website if requested
+  if (isLogoRequest) {
+    const url = extractUrlFromMessage(lastUserMessage);
+
+    if (url) {
+      try {
+        console.log('[Website] Fetching logo from:', url);
+
+        const websiteData = await processWebsiteUrl(url);
+
+        if (websiteData.images.length > 0) {
+          // Use the first image as the logo (processWebsiteUrl returns best images first)
+          const logoFile = websiteData.images[0];
+          const asset = await saveAsset(logoFile);
+          const blobUrl = URL.createObjectURL(logoFile);
+
+          generatedAudio = { asset, blobUrl }; // Reuse generatedAudio to pass logo back
+          assets = [...assets, asset];
+
+          // Update brand kit with logo
+          updatedSpec = {
+            ...updatedSpec,
+            brandKit: {
+              ...updatedSpec.brandKit,
+              logoAssetId: asset.id,
+            },
+            metadata: {
+              ...updatedSpec.metadata,
+              modified: new Date().toISOString(),
+            },
+          };
+
+          messages = [
+            ...messages,
+            {
+              id: `system-${Date.now()}`,
+              role: 'assistant',
+              content: `✓ Fetched logo from ${new URL(url).hostname} and added to brand kit`,
+              timestamp: Date.now(),
+            },
+          ];
+
+          console.log('[Website] Logo fetched and added to brand kit');
+        } else {
+          messages = [
+            ...messages,
+            {
+              id: `system-${Date.now()}`,
+              role: 'assistant',
+              content: `⚠️ Could not find any images on ${new URL(url).hostname}`,
+              timestamp: Date.now(),
+            },
+          ];
+        }
+      } catch (error) {
+        console.error('[Website] Logo fetch failed:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+
+        messages = [
+          ...messages,
+          {
+            id: `system-${Date.now()}`,
+            role: 'assistant',
+            content: `⚠️ Failed to fetch logo: ${errorMsg}`,
+            timestamp: Date.now(),
+          },
+        ];
+      }
+    }
+  }
+
   // Call normal chat with potentially updated assets and spec
   const result = await chatEditSpec(messages, updatedSpec, assets, config);
 
@@ -525,6 +598,39 @@ export function extractMusicDescription(message: string): string {
   }
 
   return description;
+}
+
+/**
+ * Helper to detect if user is requesting a logo from a website
+ */
+export function isLogoFetchRequest(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+
+  // Check for logo/image fetch keywords + URL/domain
+  const hasLogoKeyword = /\b(logo|image|icon|branding)\b/i.test(message);
+  const hasGetKeyword = /\b(get|fetch|grab|download|find|add)\b/i.test(message);
+  const hasUrl = /\b(https?:\/\/[^\s]+|[\w-]+\.com|[\w-]+\.org|[\w-]+\.net)\b/i.test(message);
+
+  return (hasLogoKeyword || hasGetKeyword) && hasUrl;
+}
+
+/**
+ * Extract URL from user message
+ */
+export function extractUrlFromMessage(message: string): string | null {
+  // Match full URLs
+  const fullUrlMatch = message.match(/https?:\/\/[^\s]+/i);
+  if (fullUrlMatch) {
+    return fullUrlMatch[0].replace(/[.,;!?]$/, ''); // Remove trailing punctuation
+  }
+
+  // Match domain-only (e.g., "nba.com")
+  const domainMatch = message.match(/\b([\w-]+\.(?:com|org|net|io|co))\b/i);
+  if (domainMatch) {
+    return `https://${domainMatch[1]}`;
+  }
+
+  return null;
 }
 
 /**
