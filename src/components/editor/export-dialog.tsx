@@ -135,7 +135,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
       }
 
       // Remove persisted URLs from temporary list (they're now managed by the store)
-      const urlsToClea Human: up = temporaryBlobUrls.filter(url => !persistedUrls.includes(url));
+      const urlsToCleanup = temporaryBlobUrls.filter(url => !persistedUrls.includes(url));
       temporaryBlobUrls.length = 0;
       temporaryBlobUrls.push(...urlsToCleanup);
 
